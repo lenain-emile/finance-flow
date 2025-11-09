@@ -1,0 +1,17 @@
+{
+    "name": "finance-flow/backend",
+    "description": "Finance Flow Backend API",
+    "type": "project",
+    "require": {
+        "php": ""
+    },
+    "require-dev": {
+        "phpunit/phpunit": "9.0"
+    },
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "your.email@example.com"
+        }
+    ]
+}
