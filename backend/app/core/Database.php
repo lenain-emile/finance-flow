@@ -1,4 +1,10 @@
 <?php
+namespace FinanceFlow\Core;
+
+use PDO;
+use PDOException;
+use Exception;
+
 /**
  * Classe simple de connexion à la base de données
  */
