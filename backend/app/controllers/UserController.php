@@ -3,17 +3,24 @@
 namespace FinanceFlow\Controllers;
 
 use FinanceFlow\Services\UserService;
+use FinanceFlow\Services\UserRepository;
+use FinanceFlow\Services\AuthService;
 use FinanceFlow\Middleware\AuthMiddleware;
 use FinanceFlow\Core\Response;
+use FinanceFlow\DTOs\User\{CreateUserRequest, UpdateUserRequest};
 
 class UserController
 {
     private UserService $userService;
+    private UserRepository $userRepository;
+    private AuthService $authService;
     private AuthMiddleware $authMiddleware;
 
     public function __construct()
     {
         $this->userService = new UserService();
+        $this->userRepository = new UserRepository();
+        $this->authService = new AuthService();
         $this->authMiddleware = new AuthMiddleware();
     }
 
@@ -29,18 +36,18 @@ class UserController
             return;
         }
 
-        // Rate limiting
-        if (!AuthMiddleware::rateLimit(10, 1)) { // 10 tentatives par minute
+        if (!AuthMiddleware::rateLimit(10, 1)) { 
             return;
         }
 
-        $result = $this->userService->createUser($data);
-
-        if ($result['success']) {
-            Response::success($result['data'], $result['message'], 201);
-        } else {
-            $statusCode = isset($result['errors']) ? 422 : 400;
-            Response::error($result['message'], $statusCode, $result['errors'] ?? null);
+        try {
+            // Créer le DTO depuis les données reçues
+            $createRequest = CreateUserRequest::fromArray($data);
+            $result = $this->userService->createUser($createRequest);
+            Response::success($result, 'Utilisateur créé avec succès', 201);
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -67,12 +74,12 @@ class UserController
             return;
         }
 
-        $result = $this->userService->loginUser($data['email'], $data['password']);
-
-        if ($result['success']) {
-            Response::success($result['data'], $result['message']);
-        } else {
-            Response::error($result['message'], 401);
+        try {
+            $userResponse = $this->userService->loginUser($data['email'], $data['password']);
+            Response::success($userResponse->toArray(), 'Connexion réussie');
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -93,12 +100,12 @@ class UserController
             return;
         }
 
-        $result = $this->userService->refreshToken($data['refresh_token']);
-
-        if ($result['success']) {
-            Response::success($result['data'], $result['message']);
-        } else {
-            Response::error($result['message'], 401);
+        try {
+            $tokenData = $this->userService->refreshToken($data['refresh_token']);
+            Response::success($tokenData, 'Token rafraîchi avec succès');
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -112,12 +119,13 @@ class UserController
             return;
         }
 
-        $result = $this->userService->getCurrentUser();
-
-        if ($result['success']) {
-            Response::success($result['data'], $result['message']);
-        } else {
-            Response::error($result['message'], 404);
+        try {
+            $userId = AuthMiddleware::getCurrentUserId();
+            $userResponse = $this->userService->getCurrentUser($userId);
+            Response::success($userResponse->toArray(), 'Profil récupéré avec succès');
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -137,13 +145,15 @@ class UserController
             return;
         }
 
-        $result = $this->userService->updateUserProfile($data);
+        try {
+            $userId = AuthMiddleware::getCurrentUserId();
+            $updateRequest = UpdateUserRequest::fromArray($data);
+            $result = $this->userService->updateUserProfile($updateRequest, $userId);
 
-        if ($result['success']) {
-            Response::success($result['data'], $result['message']);
-        } else {
-            $statusCode = isset($result['errors']) ? 422 : 400;
-            Response::error($result['message'], $statusCode, $result['errors'] ?? null);
+            Response::success($result->toArray(), "Profil mis à jour avec succès");
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -164,12 +174,12 @@ class UserController
             return;
         }
 
-        $result = $this->userService->verifyEmail($data['token']);
-
-        if ($result['success']) {
-            Response::success(null, $result['message']);
-        } else {
-            Response::error($result['message'], 400);
+        try {
+            $this->userService->verifyEmail($data['token']);
+            Response::success(null, 'Email vérifié avec succès');
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() ?: 500;
+            Response::error($e->getMessage(), $statusCode);
         }
     }
 
@@ -201,8 +211,7 @@ class UserController
             return;
         }
 
-        $userModel = new \FinanceFlow\Models\User();
-        $exists = $userModel->usernameExists($username);
+        $exists = $this->userRepository->usernameExists($username);
 
         Response::success([
             'username' => $username,
@@ -221,8 +230,7 @@ class UserController
             return;
         }
 
-        $userModel = new \FinanceFlow\Models\User();
-        $exists = $userModel->emailExists($email);
+        $exists = $this->userRepository->emailExists($email);
 
         Response::success([
             'email' => $email,
@@ -252,8 +260,7 @@ class UserController
         }
 
         $userId = AuthMiddleware::getCurrentUserId();
-        $userModel = new \FinanceFlow\Models\User();
-        $user = $userModel->findById($userId);
+        $user = $this->userRepository->findUserObjectById($userId);
 
         if (!$user) {
             Response::error('Utilisateur non trouvé', 404);
@@ -261,14 +268,13 @@ class UserController
         }
 
         // Vérifier le mot de passe
-        $authService = new \FinanceFlow\Services\AuthService();
-        if (!$authService->verifyPassword($data['password'], $user->getPasswordHash())) {
+        if (!$this->authService->verifyPassword($data['password'], $user->getPasswordHash())) {
             Response::error('Mot de passe incorrect', 401);
             return;
         }
 
-        // Supprimer le compte (soft delete) - utiliser update() au lieu de delete()
-        if ($user->update(['is_active' => 0])) {
+        // Supprimer le compte (soft delete)
+        if ($this->userRepository->delete($userId)) {
             Response::success(null, 'Compte supprimé avec succès');
         } else {
             Response::error('Erreur lors de la suppression du compte', 500);
@@ -283,3 +289,11 @@ class UserController
         Response::error('Endpoint non trouvé', 404);
     }
 }
+
+
+
+
+// entities 
+// models 
+// interfaces 
+// DTO GET / POST / PUT 3 fichiers  

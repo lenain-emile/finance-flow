@@ -3,53 +3,51 @@
 namespace FinanceFlow\Services;
 
 use FinanceFlow\Models\User;
-use FinanceFlow\Services\{AuthService, ValidationService};
-use FinanceFlow\DTOs\ServiceResponse;
+use FinanceFlow\Services\{AuthService, ValidationService, UserRepository};
+use FinanceFlow\DTOs\User\{CreateUserRequest, UpdateUserRequest, UserResponse};
 
 class UserService
 {
     private AuthService $authService;
-    private User $userModel;
+    private UserRepository $userRepository;
     private ValidationService $validator;
 
     public function __construct()
     {
         $this->authService = new AuthService();
-        $this->userModel = new User();
+        $this->userRepository = new UserRepository();
         $this->validator = new ValidationService();
     }
 
     /**
      * Créer un nouvel utilisateur
      */
-    public function createUser(array $data): array
+    public function createUser(CreateUserRequest $request): array
     {
         try {
-            // Validation des données
-            $validation = $this->validator->validateUserRegistration($data);
+            // Validation du DTO
+            $validation = $request->isValid();
             if (!$validation['valid']) {
-                return ServiceResponse::validationError($validation['errors']);
+                throw new \Exception('Données invalides: ' . implode(', ', $validation['errors']), 422);
             }
 
-            // Vérifications d'unicité
-            if ($this->userModel->emailExists($data['email'])) {
-                return ServiceResponse::error('Cette adresse email est déjà utilisée');
-            }
-
-            if ($this->userModel->usernameExists($data['username'])) {
-                return ServiceResponse::error('Ce nom d\'utilisateur est déjà pris');
+            // Validation métier approfondie
+            $businessValidation = $this->validator->validateUserRegistration($request->toArray());
+            if (!$businessValidation['valid']) {
+                throw new \Exception('Erreurs de validation: ' . implode(', ', $businessValidation['errors']), 422);
             }
 
             // Créer l'utilisateur
-            $userData = $this->prepareUserDataForCreation($data);
-            $userId = $this->userModel->create($userData);
+            $userData = $this->prepareUserDataForCreation($request->toArray());
+            $userId = $this->userRepository->create($userData);
 
             if (!$userId) {
-                return ServiceResponse::error('Erreur lors de la création de l\'utilisateur');
+                throw new \Exception('Erreur lors de la création de l\'utilisateur', 500);
             }
 
-            // Récupérer l'utilisateur créé
-            $user = $this->userModel->findById($userId);
+            // Récupérer l'utilisateur créé et créer la réponse
+            $user = $this->userRepository->findUserObjectById($userId);
+            $userResponse = UserResponse::fromUser($user);
 
             // Générer un token de vérification d'email
             $verificationToken = $this->authService->generateEmailVerificationToken(
@@ -57,39 +55,38 @@ class UserService
                 $user->getEmail()
             );
 
-            return ServiceResponse::success('Utilisateur créé avec succès', [
-                'user' => $user->toArray(),
+            return [
+                'user' => $userResponse->toArray(),
                 'email_verification_token' => $verificationToken
-            ]);
+            ];
 
         } catch (\Exception $e) {
             error_log("Erreur création utilisateur: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
     /**
      * Authentifier un utilisateur
      */
-    public function loginUser(string $email, string $password): array
+    public function loginUser(string $email, string $password): UserResponse
     {
         try {
-            $user = $this->userModel->findByEmail($email);
+            $user = $this->userRepository->findUserObjectByEmail($email);
 
             if (!$user || !$this->authService->verifyPassword($password, $user->getPasswordHash())) {
-                return ServiceResponse::error('Email ou mot de passe incorrect');
+                throw new \Exception('Email ou mot de passe incorrect', 401);
             }
 
+            $userResponse = UserResponse::fromUser($user);
             $tokens = $this->generateUserTokens($user);
+            $userResponse->setTokens($tokens);
 
-            return ServiceResponse::success('Connexion réussie', [
-                'user' => $user->toArray(),
-                ...$tokens
-            ]);
+            return $userResponse;
 
         } catch (\Exception $e) {
             error_log("Erreur connexion utilisateur: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
@@ -101,12 +98,12 @@ class UserService
         try {
             $decoded = $this->authService->verifyRefreshToken($refreshToken);
             if (!$decoded) {
-                return ServiceResponse::error('Token de rafraîchissement invalide');
+                throw new \Exception('Token de rafraîchissement invalide', 401);
             }
 
-            $user = $this->userModel->findById($decoded->user_id);
+            $user = $this->userRepository->findUserObjectById($decoded->user_id);
             if (!$user) {
-                return ServiceResponse::error('Utilisateur non trouvé');
+                throw new \Exception('Utilisateur non trouvé', 404);
             }
 
             $accessToken = $this->authService->generateToken(
@@ -115,104 +112,106 @@ class UserService
                 $user->getUsername()
             );
 
-            return ServiceResponse::success('Token rafraîchi avec succès', [
+            return [
                 'access_token' => $accessToken,
                 'token_type' => 'Bearer',
                 'expires_in' => 3600
-            ]);
+            ];
 
         } catch (\Exception $e) {
             error_log("Erreur rafraîchissement token: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
     /**
      * Obtenir le profil de l'utilisateur actuel
      */
-    public function getCurrentUser(): array
+    public function getCurrentUser(int $userId): UserResponse
     {
         try {
-            $user = $this->getAuthenticatedUser();
+            $user = $this->userRepository->findUserObjectById($userId);
             if (!$user) {
-                return ServiceResponse::error('Token manquant ou invalide', [], 401);
+                throw new \Exception('Utilisateur non trouvé', 404);
             }
 
-            return ServiceResponse::success('Profil récupéré avec succès', [
-                'user' => $user->toArray()
-            ]);
+            return UserResponse::fromUser($user);
 
         } catch (\Exception $e) {
             error_log("Erreur récupération profil: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
     /**
      * Mettre à jour le profil utilisateur
      */
-    public function updateUserProfile(array $data): array
+    public function updateUserProfile(UpdateUserRequest $request, int $userId): UserResponse
     {
         try {
-            $user = $this->getAuthenticatedUser();
-            if (!$user) {
-                return ServiceResponse::error('Token manquant ou invalide', [], 401);
-            }
-
-            // Validation des données
-            $validation = $this->validator->validateUserUpdate($data, $user->getId());
+            // Validation du DTO
+            $validation = $request->isValid();
             if (!$validation['valid']) {
-                return ServiceResponse::validationError($validation['errors']);
+                throw new \Exception('Données invalides: ' . implode(', ', $validation['errors']), 422);
             }
 
-            $updateData = $this->prepareUserDataForUpdate($data);
-            $updated = $user->update($updateData);
+            // Vérifier que l'utilisateur a des données à mettre à jour
+            if (!$request->hasUpdates()) {
+                throw new \Exception('Aucune donnée à mettre à jour', 400);
+            }
+
+            // Validation métier approfondie avec ValidationService
+            $businessValidation = $this->validator->validateUserUpdate($request->toArray(), $userId);
+            if (!$businessValidation['valid']) {
+                throw new \Exception('Erreurs de validation: ' . implode(', ', $businessValidation['errors']), 422);
+            }
+
+            $updateData = $this->prepareUserDataForUpdate($request->toArray());
+            $updated = $this->userRepository->update($userId, $updateData);
 
             if (!$updated) {
-                return ServiceResponse::error('Erreur lors de la mise à jour du profil');
+                throw new \Exception('Erreur lors de la mise à jour du profil', 500);
             }
 
-            $updatedUser = $this->userModel->findById($user->getId());
-            return ServiceResponse::success('Profil mis à jour avec succès', [
-                'user' => $updatedUser->toArray()
-            ]);
+            $updatedUser = $this->userRepository->findUserObjectById($userId);
+            return UserResponse::fromUser($updatedUser);
 
         } catch (\Exception $e) {
             error_log("Erreur mise à jour profil: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
     /**
      * Vérifier l'email d'un utilisateur
      */
-    public function verifyEmail(string $token): array
+    public function verifyEmail(string $token): bool
     {
         try {
             $decoded = $this->authService->verifyEmailVerificationToken($token);
             if (!$decoded) {
-                return ServiceResponse::error('Token de vérification invalide ou expiré');
+                throw new \Exception('Token de vérification invalide ou expiré', 400);
             }
 
-            $user = $this->userModel->findById($decoded->user_id);
+            $user = $this->userRepository->findUserObjectById($decoded->user_id);
             if (!$user) {
-                return ServiceResponse::error('Utilisateur non trouvé');
+                throw new \Exception('Utilisateur non trouvé', 404);
             }
 
             if ($user->isVerified()) {
-                return ServiceResponse::success('Email déjà vérifié');
+                return true; // Déjà vérifié, pas d'erreur
             }
 
-            $updated = $user->update(['is_verified' => 1]);
+            $updated = $this->userRepository->update($user->getId(), ['is_verified' => 1]);
             if (!$updated) {
-                return ServiceResponse::error('Erreur lors de la vérification de l\'email');
+                throw new \Exception('Erreur lors de la vérification de l\'email', 500);
             }
 
-            return ServiceResponse::success('Email vérifié avec succès');
+            return true;
 
         } catch (\Exception $e) {
             error_log("Erreur vérification email: " . $e->getMessage());
-            return ServiceResponse::error('Erreur interne du serveur');
+            throw $e;
         }
     }
 
@@ -264,6 +263,6 @@ class UserService
     private function getAuthenticatedUser(): ?User
     {
         $userId = $this->authService->getUserIdFromToken();
-        return $userId ? $this->userModel->findById($userId) : null;
+        return $userId ? $this->userRepository->findUserObjectById($userId) : null;
     }
 }
