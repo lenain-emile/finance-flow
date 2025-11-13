@@ -2,15 +2,15 @@
 
 namespace FinanceFlow\Services;
 
-use FinanceFlow\Models\User;
+use FinanceFlow\Services\UserRepository;
 
 class ValidationService
 {
-    private User $userModel;
+    private UserRepository $userRepository;
 
     public function __construct()
     {
-        $this->userModel = new User();
+        $this->userRepository = new UserRepository();
     }
 
     /**
@@ -70,7 +70,7 @@ class ValidationService
             $errors['username'] = 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
         } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
             $errors['username'] = 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et tirets bas';
-        } elseif ($this->userModel->usernameExists($username, $excludeUserId)) {
+        } elseif ($this->userRepository->usernameExists($username, $excludeUserId)) {
             $errors['username'] = 'Ce nom d\'utilisateur est déjà pris';
         }
 
@@ -85,7 +85,7 @@ class ValidationService
             $errors['email'] = 'L\'email est requis';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'Format d\'email invalide';
-        } elseif ($this->userModel->emailExists($email, $excludeUserId)) {
+        } elseif ($this->userRepository->emailExists($email, $excludeUserId)) {
             $errors['email'] = 'Cette adresse email est déjà utilisée';
         }
 
@@ -125,4 +125,6 @@ class ValidationService
 
         return $errors;
     }
+
+
 }

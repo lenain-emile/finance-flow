@@ -78,8 +78,7 @@ class AuthMiddleware
             return false;
         }
 
-        // Ici vous pourriez ajouter une vérification supplémentaire
-        // en consultant la base de données pour vérifier is_verified
+        
         
         return true;
     }

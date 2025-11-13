@@ -2,14 +2,12 @@
 
 namespace FinanceFlow\Models;
 
-use FinanceFlow\Core\Database;
-use PDO;
-use Exception;
-
+/**
+ * Entité User - représente un utilisateur sans logique de base de données
+ * La logique de base de données est maintenant dans UserRepository
+ */
 class User
 {
-    private PDO $pdo;
-    
     // Propriétés de l'utilisateur
     private ?int $id = null;
     private ?string $username = null;
@@ -24,216 +22,36 @@ class User
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
 
-    public function __construct()
-    {
-        $database = Database::getInstance();
-        $this->pdo = $database->getConnection();
-    }
-
-    // Getters essentiels seulement
+    // Getters
     public function getId(): ?int { return $this->id; }
     public function getUsername(): ?string { return $this->username; }
     public function getEmail(): ?string { return $this->email; }
     public function getPasswordHash(): ?string { return $this->passwordHash; }
+    public function getFirstName(): ?string { return $this->firstName; }
+    public function getLastName(): ?string { return $this->lastName; }
+    public function getPhone(): ?string { return $this->phone; }
+    public function getAvatar(): ?string { return $this->avatar; }
+    public function isActive(): bool { return $this->isActive; }
     public function isVerified(): bool { return $this->isVerified; }
+    public function getCreatedAt(): ?string { return $this->createdAt; }
+    public function getUpdatedAt(): ?string { return $this->updatedAt; }
+
+    // Setters
+    public function setId(?int $id): self { $this->id = $id; return $this; }
+    public function setUsername(?string $username): self { $this->username = $username; return $this; }
+    public function setEmail(?string $email): self { $this->email = $email; return $this; }
+    public function setPasswordHash(?string $passwordHash): self { $this->passwordHash = $passwordHash; return $this; }
+    public function setFirstName(?string $firstName): self { $this->firstName = $firstName; return $this; }
+    public function setLastName(?string $lastName): self { $this->lastName = $lastName; return $this; }
+    public function setPhone(?string $phone): self { $this->phone = $phone; return $this; }
+    public function setAvatar(?string $avatar): self { $this->avatar = $avatar; return $this; }
+    public function setIsActive(bool $isActive): self { $this->isActive = $isActive; return $this; }
+    public function setIsVerified(bool $isVerified): self { $this->isVerified = $isVerified; return $this; }
+    public function setCreatedAt(?string $createdAt): self { $this->createdAt = $createdAt; return $this; }
+    public function setUpdatedAt(?string $updatedAt): self { $this->updatedAt = $updatedAt; return $this; }
 
     /**
-     * Créer un nouvel utilisateur
-     */
-    public function create(array $data): bool
-    {
-        try {
-            $sql = "INSERT INTO user (username, email, password_hash, first_name, last_name, phone, avatar, is_active, is_verified, created_at, updated_at) 
-                    VALUES (:username, :email, :password_hash, :first_name, :last_name, :phone, :avatar, :is_active, :is_verified, NOW(), NOW())";
-            
-            $stmt = $this->pdo->prepare($sql);
-            
-            $result = $stmt->execute([
-                'username' => $data['username'],
-                'email' => $data['email'],
-                'password_hash' => $data['password_hash'],
-                'first_name' => $data['first_name'] ?? null,
-                'last_name' => $data['last_name'] ?? null,
-                'phone' => $data['phone'] ?? null,
-                'avatar' => $data['avatar'] ?? null,
-                'is_active' => $data['is_active'] ?? 1,
-                'is_verified' => $data['is_verified'] ?? 0
-            ]);
-
-            if ($result) {
-                $this->id = $this->pdo->lastInsertId();
-                $this->loadFromArray($data);
-            }
-
-            return $result;
-        } catch (Exception $e) {
-            error_log("Erreur création utilisateur: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Trouver un utilisateur par ID
-     */
-    public function findById(int $id): ?User
-    {
-        try {
-            $sql = "SELECT * FROM user WHERE id = :id AND is_active = 1";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute(['id' => $id]);
-            
-            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($userData) {
-                $user = new User();
-                $user->loadFromArray($userData);
-                return $user;
-            }
-            
-            return null;
-        } catch (Exception $e) {
-            error_log("Erreur recherche utilisateur par ID: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Trouver un utilisateur par email
-     */
-    public function findByEmail(string $email): ?User
-    {
-        try {
-            $sql = "SELECT * FROM user WHERE email = :email AND is_active = 1";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute(['email' => $email]);
-            
-            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($userData) {
-                $user = new User();
-                $user->loadFromArray($userData);
-                return $user;
-            }
-            
-            return null;
-        } catch (Exception $e) {
-            error_log("Erreur recherche utilisateur par email: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Mettre à jour l'utilisateur
-     */
-    public function update(array $data): bool
-    {
-        if (!$this->id) {
-            return false;
-        }
-
-        try {
-            $fields = [];
-            $params = ['id' => $this->id];
-            
-            $allowedFields = ['username', 'email', 'password_hash', 'first_name', 'last_name', 'phone', 'avatar', 'is_verified', 'is_active'];
-            
-            foreach ($allowedFields as $field) {
-                if (array_key_exists($field, $data)) {
-                    $fields[] = "$field = :$field";
-                    $params[$field] = $data[$field];
-                }
-            }
-            
-            if (empty($fields)) {
-                return false;
-            }
-            
-            $fields[] = "updated_at = NOW()";
-            $sql = "UPDATE user SET " . implode(', ', $fields) . " WHERE id = :id";
-            
-            $stmt = $this->pdo->prepare($sql);
-            $result = $stmt->execute($params);
-            
-            if ($result) {
-                $this->loadFromArray($data);
-            }
-            
-            return $result;
-        } catch (Exception $e) {
-            error_log("Erreur mise à jour utilisateur: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Supprimer l'utilisateur (soft delete)
-     */
-    public function delete(): bool
-    {
-        if (!$this->id) {
-            return false;
-        }
-
-        try {
-            $sql = "UPDATE user SET is_active = 0, updated_at = NOW() WHERE id = :id";
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute(['id' => $this->id]);
-        } catch (Exception $e) {
-            error_log("Erreur suppression utilisateur: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Vérifier si l'email existe déjà
-     */
-    public function emailExists(string $email, ?int $excludeId = null): bool
-    {
-        try {
-            $sql = "SELECT COUNT(*) FROM user WHERE email = :email AND is_active = 1";
-            $params = ['email' => $email];
-            
-            if ($excludeId) {
-                $sql .= " AND id != :exclude_id";
-                $params['exclude_id'] = $excludeId;
-            }
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            
-            return $stmt->fetchColumn() > 0;
-        } catch (Exception $e) {
-            error_log("Erreur vérification email: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Vérifier si le nom d'utilisateur existe déjà
-     */
-    public function usernameExists(string $username, ?int $excludeId = null): bool
-    {
-        try {
-            $sql = "SELECT COUNT(*) FROM user WHERE username = :username AND is_active = 1";
-            $params = ['username' => $username];
-            
-            if ($excludeId) {
-                $sql .= " AND id != :exclude_id";
-                $params['exclude_id'] = $excludeId;
-            }
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            
-            return $stmt->fetchColumn() > 0;
-        } catch (Exception $e) {
-            error_log("Erreur vérification username: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Convertir l'utilisateur en tableau (sans le mot de passe)
+     * Convertir l'utilisateur en tableau (sans le mot de passe par défaut)
      */
     public function toArray(bool $includePassword = false): array
     {
@@ -261,7 +79,7 @@ class User
     /**
      * Charger les données depuis un tableau
      */
-    private function loadFromArray(array $data): void
+    public function loadFromArray(array $data): self
     {
         $this->id = $data['id'] ?? null;
         $this->username = $data['username'] ?? null;
@@ -275,5 +93,46 @@ class User
         $this->isVerified = (bool) ($data['is_verified'] ?? false);
         $this->createdAt = $data['created_at'] ?? null;
         $this->updatedAt = $data['updated_at'] ?? null;
+        
+        return $this;
+    }
+
+    /**
+     * Créer un objet User depuis un tableau de données
+     */
+    public static function fromArray(array $data): self
+    {
+        return (new self())->loadFromArray($data);
+    }
+
+    /**
+     * Obtenir le nom complet
+     */
+    public function getFullName(): string
+    {
+        $parts = array_filter([$this->firstName, $this->lastName]);
+        return implode(' ', $parts) ?: $this->username;
+    }
+
+    /**
+     * Vérifier si l'utilisateur a un nom complet
+     */
+    public function hasFullName(): bool
+    {
+        return !empty($this->firstName) || !empty($this->lastName);
+    }
+
+    /**
+     * Obtenir l'initiales
+     */
+    public function getInitials(): string
+    {
+        if ($this->hasFullName()) {
+            $first = $this->firstName ? strtoupper($this->firstName[0]) : '';
+            $last = $this->lastName ? strtoupper($this->lastName[0]) : '';
+            return $first . $last;
+        }
+        
+        return $this->username ? strtoupper(substr($this->username, 0, 2)) : 'U';
     }
 }
