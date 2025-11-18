@@ -82,9 +82,13 @@ class User
     public function loadFromArray(array $data): self
     {
         $this->id = $data['id'] ?? null;
-        $this->username = $data['username'] ?? null;
+        
+        // Mapper les champs de la vraie table vers notre modèle
+        $this->username = $data['name'] ?? $data['username'] ?? null;
         $this->email = $data['email'] ?? null;
-        $this->passwordHash = $data['password_hash'] ?? null;
+        $this->passwordHash = $data['password'] ?? $data['password_hash'] ?? null;
+        
+        // Les autres champs n'existent pas dans la vraie table
         $this->firstName = $data['first_name'] ?? null;
         $this->lastName = $data['last_name'] ?? null;
         $this->phone = $data['phone'] ?? null;

@@ -5,9 +5,14 @@ namespace FinanceFlow\Middleware;
 use FinanceFlow\Services\AuthService;
 use FinanceFlow\Core\Response;
 
+/**
+ * Middleware d'authentification pour l'API
+ * Gère la validation des tokens JWT et la protection des routes
+ */
 class AuthMiddleware
 {
     private AuthService $authService;
+    private static ?int $currentUserId = null;
 
     public function __construct()
     {
@@ -15,178 +20,65 @@ class AuthMiddleware
     }
 
     /**
-     * Vérifier l'authentification
+     * Authentifier la requête avec JWT
+     * @return bool
      */
     public function authenticate(): bool
     {
         $token = $this->authService->extractTokenFromHeader();
         
         if (!$token) {
-            Response::json([
-                'success' => false,
-                'message' => 'Token manquant. Veuillez vous connecter.'
-            ], 401);
+            Response::error('Token d\'accès requis', 401);
             return false;
         }
 
         $decoded = $this->authService->verifyToken($token);
         
         if (!$decoded) {
-            Response::json([
-                'success' => false,
-                'message' => 'Token invalide ou expiré. Veuillez vous reconnecter.'
-            ], 401);
+            Response::error('Token invalide ou expiré', 401);
             return false;
         }
 
-        // Stocker les informations de l'utilisateur dans la session/globals
-        $GLOBALS['current_user_id'] = $decoded->user_id;
-        $GLOBALS['current_user_email'] = $decoded->email;
-        $GLOBALS['current_user_username'] = $decoded->username;
-
-        return true;
-    }
-
-    /**
-     * Middleware optionnel - n'interrompt pas le flux si pas de token
-     */
-    public function optionalAuth(): bool
-    {
-        $token = $this->authService->extractTokenFromHeader();
-        
-        if (!$token) {
-            return true; // Continue sans authentification
-        }
-
-        $decoded = $this->authService->verifyToken($token);
-        
-        if ($decoded) {
-            $GLOBALS['current_user_id'] = $decoded->user_id;
-            $GLOBALS['current_user_email'] = $decoded->email;
-            $GLOBALS['current_user_username'] = $decoded->username;
-        }
-
-        return true;
-    }
-
-    /**
-     * Vérifier si l'utilisateur est vérifié
-     */
-    public function requireVerified(): bool
-    {
-        if (!$this->authenticate()) {
-            return false;
-        }
-
-        
+        // Stocker l'ID utilisateur pour utilisation ultérieure
+        self::$currentUserId = $decoded->user_id;
         
         return true;
     }
 
     /**
-     * Vérifier les permissions admin (pour de futures fonctionnalités)
+     * Obtenir l'ID de l'utilisateur authentifié
+     * @return int|null
      */
-    public function requireAdmin(): bool
+    public static function getCurrentUserId(): ?int
     {
-        if (!$this->authenticate()) {
-            return false;
-        }
-
-        // Ici vous pourriez ajouter une vérification des rôles
-        // Pour l'instant, on suppose que tous les utilisateurs authentifiés sont autorisés
-        
-        return true;
+        return self::$currentUserId;
     }
 
     /**
-     * Middleware CORS
-     */
-    public static function handleCors(): void
-    {
-        // Gérer les requêtes OPTIONS (preflight)
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            header('Access-Control-Allow-Origin: *');
-            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-            header('Access-Control-Max-Age: 86400'); // 24 heures
-            http_response_code(204);
-            exit;
-        }
-
-        // Headers CORS pour les autres requêtes
-        header('Access-Control-Allow-Origin: *');
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    }
-
-    /**
-     * Middleware de limitation de taux (rate limiting)
-     */
-    public static function rateLimit(int $maxRequests = 60, int $windowMinutes = 1): bool
-    {
-        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $key = "rate_limit_" . md5($clientIp);
-        
-        // Ici vous pourriez utiliser Redis ou un système de cache
-        // Pour l'instant, on utilise une approche simple avec des fichiers
-        
-        $cacheDir = sys_get_temp_dir() . '/finance-flow-cache';
-        if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0777, true);
-        }
-        
-        $cacheFile = $cacheDir . '/' . $key;
-        $currentTime = time();
-        $windowStart = $currentTime - ($windowMinutes * 60);
-        
-        $requests = [];
-        if (file_exists($cacheFile)) {
-            $data = json_decode(file_get_contents($cacheFile), true);
-            if ($data) {
-                $requests = array_filter($data, function($timestamp) use ($windowStart) {
-                    return $timestamp > $windowStart;
-                });
-            }
-        }
-        
-        if (count($requests) >= $maxRequests) {
-            Response::json([
-                'success' => false,
-                'message' => 'Trop de requêtes. Veuillez patienter avant de réessayer.',
-                'retry_after' => $windowMinutes * 60
-            ], 429);
-            return false;
-        }
-        
-        $requests[] = $currentTime;
-        file_put_contents($cacheFile, json_encode($requests));
-        
-        return true;
-    }
-
-    /**
-     * Middleware de validation des données JSON
+     * Validation du JSON d'entrée avec gestion d'erreurs
+     * @return array|null
      */
     public static function validateJsonInput(): ?array
     {
+        // Vérifier le Content-Type
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-        
         if (strpos($contentType, 'application/json') === false) {
-            Response::json([
-                'success' => false,
-                'message' => 'Content-Type doit être application/json'
-            ], 400);
+            Response::error('Content-Type doit être application/json', 400);
             return null;
         }
 
-        $input = file_get_contents('php://input');
-        $data = json_decode($input, true);
+        // Lire et décoder le JSON
+        $rawInput = file_get_contents('php://input');
+        
+        if (empty($rawInput)) {
+            Response::error('Corps de requête vide', 400);
+            return null;
+        }
 
+        $data = json_decode($rawInput, true);
+        
         if (json_last_error() !== JSON_ERROR_NONE) {
-            Response::json([
-                'success' => false,
-                'message' => 'JSON invalide: ' . json_last_error_msg()
-            ], 400);
+            Response::error('JSON invalide: ' . json_last_error_msg(), 400);
             return null;
         }
 
@@ -194,50 +86,134 @@ class AuthMiddleware
     }
 
     /**
-     * Middleware de logging des requêtes
+     * Rate limiting simple basé sur IP
+     * @param int $maxAttempts Nombre maximum de tentatives
+     * @param int $windowMinutes Fenêtre de temps en minutes
+     * @return bool
      */
-    public static function logRequest(): void
+    public static function rateLimit(int $maxAttempts = 10, int $windowMinutes = 1): bool
     {
-        $logData = [
-            'timestamp' => date('Y-m-d H:i:s'),
-            'method' => $_SERVER['REQUEST_METHOD'],
-            'uri' => $_SERVER['REQUEST_URI'],
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-            'user_id' => $GLOBALS['current_user_id'] ?? null
-        ];
-
-        // Log dans un fichier (vous pourriez utiliser un logger plus sophistiqué)
-        $logDir = dirname(__DIR__, 2) . '/logs';
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0777, true);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $key = 'rate_limit_' . md5($ip);
+        
+        // En production, vous utiliseriez Redis ou une autre solution de cache
+        // Ici, nous utilisons une simulation avec les sessions
+        session_start();
+        
+        $now = time();
+        $window = $windowMinutes * 60; // Convertir en secondes
+        
+        if (!isset($_SESSION[$key])) {
+            $_SESSION[$key] = [];
         }
         
-        $logFile = $logDir . '/requests_' . date('Y-m-d') . '.log';
-        file_put_contents($logFile, json_encode($logData) . "\n", FILE_APPEND | LOCK_EX);
+        // Nettoyer les tentatives anciennes
+        $_SESSION[$key] = array_filter($_SESSION[$key], function($timestamp) use ($now, $window) {
+            return ($now - $timestamp) < $window;
+        });
+        
+        // Vérifier le nombre de tentatives
+        if (count($_SESSION[$key]) >= $maxAttempts) {
+            $retryAfter = $window - ($now - min($_SESSION[$key]));
+            header("Retry-After: {$retryAfter}");
+            Response::error(
+                "Trop de tentatives. Réessayez dans {$retryAfter} secondes.",
+                null,
+                429
+            );
+            return false;
+        }
+        
+        // Ajouter la tentative actuelle
+        $_SESSION[$key][] = $now;
+        
+        return true;
     }
 
     /**
-     * Obtenir l'ID de l'utilisateur actuel
+     * Vérification CORS simple pour les requêtes preflight
      */
-    public static function getCurrentUserId(): ?int
+    public static function handleCorsPreFlight(): bool
     {
-        return $GLOBALS['current_user_id'] ?? null;
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            header('HTTP/1.1 200 OK');
+            header('Access-Control-Allow-Origin: http://localhost:5173');
+            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Max-Age: 86400');
+            exit();
+        }
+        return false;
     }
 
     /**
-     * Obtenir l'email de l'utilisateur actuel
+     * Validation des permissions utilisateur
+     * @param array $requiredRoles Rôles requis
+     * @return bool
      */
-    public static function getCurrentUserEmail(): ?string
+    public function checkPermissions(array $requiredRoles = []): bool
     {
-        return $GLOBALS['current_user_email'] ?? null;
+        if (!$this->authenticate()) {
+            return false;
+        }
+
+        // Si aucun rôle spécifique n'est requis, l'authentification suffit
+        if (empty($requiredRoles)) {
+            return true;
+        }
+
+        // Ici, vous pourriez implémenter la logique des rôles
+        // En récupérant les rôles de l'utilisateur depuis la base de données
+        
+        return true; // Simplifié pour le moment
     }
 
     /**
-     * Obtenir le username de l'utilisateur actuel
+     * Middleware pour les routes admin
+     * @return bool
      */
-    public static function getCurrentUsername(): ?string
+    public function requireAdmin(): bool
     {
-        return $GLOBALS['current_user_username'] ?? null;
+        return $this->checkPermissions(['admin']);
+    }
+
+    /**
+     * Validation de l'origine de la requête (protection CSRF basique)
+     */
+    public static function validateOrigin(): bool
+    {
+        $allowedOrigins = [
+            'http://localhost:5173', // Vite dev server
+            'http://localhost:3000', // React dev server alternatif
+            'https://votre-domaine.com' // Production
+        ];
+
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        
+        if (!in_array($origin, $allowedOrigins)) {
+            Response::error('Origine non autorisée', 403);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Nettoyage de sécurité pour les données d'entrée
+     * @param array $data
+     * @return array
+     */
+    public static function sanitizeInput(array $data): array
+    {
+        return array_map(function($value) {
+            if (is_string($value)) {
+                // Supprimer les espaces en début/fin
+                $value = trim($value);
+                // Échapper les caractères HTML
+                $value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+            }
+            return $value;
+        }, $data);
     }
 }

@@ -1,0 +1,12 @@
+/* Components Styles */
+@import './components/navbar.css';
+@import './components/forms.css';
+@import './components/pages.css';
+
+/* Custom Color Variables */
+:root {
+  --color-primary: #C38EF0;
+  --color-secondary: #BCF08E;
+  --color-primary-rgb: 195, 142, 240;
+  --color-secondary-rgb: 188, 240, 142;
+}

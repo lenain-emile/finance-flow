@@ -30,22 +30,23 @@ class UserController
      */
     public function register(): void
     {
-        // Validation du JSON
-        $data = AuthMiddleware::validateJsonInput();
-        if ($data === null) {
-            return;
-        }
-
-        if (!AuthMiddleware::rateLimit(10, 1)) { 
-            return;
-        }
-
         try {
+            // Validation du JSON
+            $data = AuthMiddleware::validateJsonInput();
+            if ($data === null) {
+                return;
+            }
+
+            if (!AuthMiddleware::rateLimit(10, 1)) { 
+                return;
+            }
+
             // Créer le DTO depuis les données reçues
             $createRequest = CreateUserRequest::fromArray($data);
             $result = $this->userService->createUser($createRequest);
             Response::success($result, 'Utilisateur créé avec succès', 201);
         } catch (\Exception $e) {
+            error_log("Erreur registration: " . $e->getMessage() . " - " . $e->getTraceAsString());
             $statusCode = $e->getCode() ?: 500;
             Response::error($e->getMessage(), $statusCode);
         }

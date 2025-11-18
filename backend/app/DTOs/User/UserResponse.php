@@ -32,17 +32,17 @@ class UserResponse
     public static function fromUser(User $user): self
     {
         return new self(
-            id: $user->getId(),
-            username: $user->getUsername(),
-            email: $user->getEmail(),
+            id: $user->getId() ?? 0,
+            username: $user->getUsername() ?? '',
+            email: $user->getEmail() ?? '',
             firstName: $user->getFirstName(),
             lastName: $user->getLastName(),
             phone: $user->getPhone(),
             avatar: $user->getAvatar(),
             isActive: $user->isActive(),
             isVerified: $user->isVerified(),
-            createdAt: $user->getCreatedAt(),
-            updatedAt: $user->getUpdatedAt()
+            createdAt: $user->getCreatedAt() ?? date('Y-m-d H:i:s'),
+            updatedAt: $user->getUpdatedAt() ?? date('Y-m-d H:i:s')
         );
     }
 

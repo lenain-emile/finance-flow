@@ -125,4 +125,5 @@ composer.lock
 
 # Local configuration
 config/local.php
+backend/config/.env
 .env.local

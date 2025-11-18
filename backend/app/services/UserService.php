@@ -47,17 +47,21 @@ class UserService
 
             // Récupérer l'utilisateur créé et créer la réponse
             $user = $this->userRepository->findUserObjectById($userId);
+            if (!$user) {
+                throw new \Exception('Utilisateur créé mais impossible de le récupérer', 500);
+            }
+            
             $userResponse = UserResponse::fromUser($user);
 
-            // Générer un token de vérification d'email
-            $verificationToken = $this->authService->generateEmailVerificationToken(
-                $user->getId(),
-                $user->getEmail()
-            );
+            // Temporairement désactiver le token de vérification
+            // $verificationToken = $this->authService->generateEmailVerificationToken(
+            //     $user->getId(),
+            //     $user->getEmail()
+            // );
 
             return [
                 'user' => $userResponse->toArray(),
-                'email_verification_token' => $verificationToken
+                // 'email_verification_token' => $verificationToken
             ];
 
         } catch (\Exception $e) {
