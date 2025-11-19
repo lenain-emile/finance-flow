@@ -1,16 +1,106 @@
-# React + Vite
+# Finance Flow - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface utilisateur moderne pour l'application de gestion financière Finance Flow.
 
-Currently, two official plugins are available:
+## 🚀 Technologies
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** - Framework frontend moderne
+- **Vite** - Build tool rapide avec HMR
+- **Tailwind CSS** - Framework CSS utilitaire
+- **shadcn/ui** - Composants UI élégants et accessibles
+- **Axios** - Client HTTP pour les appels API
+- **React Router** - Navigation côté client
+- **Lucide React** - Icônes modernes
 
-## React Compiler
+## 📁 Structure du Projet
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+src/
+├── components/
+│   ├── atoms/        # Composants de base (button, input, etc.)
+│   ├── molecules/    # Composants composés (forms, navbar, etc.)
+│   └── organisms/    # Composants complexes (pages sections)
+├── contexts/         # Contextes React (AuthContext)
+├── hooks/           # Hooks personnalisés
+├── services/        # Services API et logique métier
+├── styles/          # Styles CSS personnalisés
+└── utils/           # Utilitaires et helpers
+```
 
-## Expanding the ESLint configuration
+## 🔑 Fonctionnalités
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- ✅ **Authentification JWT** - Inscription et connexion sécurisées
+- ✅ **Interface responsive** - Design adaptatif pour tous les écrans
+- ✅ **Validation de formulaires** - Validation côté client en temps réel
+- ✅ **Gestion d'état** - Context API pour l'authentification
+- ✅ **Composants réutilisables** - Architecture atomique
+
+## 🛠️ Installation et Développement
+
+```bash
+# Installation des dépendances
+npm install
+
+# Lancement en mode développement
+npm run dev
+
+# Build pour la production
+npm run build
+
+# Prévisualisation du build
+npm run preview
+
+# Linting du code
+npm run lint
+```
+
+## 🔧 Configuration
+
+### Variables d'environnement
+Le frontend est configuré pour communiquer avec le backend PHP via :
+- **API Base URL** : `http://localhost/finance-flow/backend/public`
+- **CORS** : Configuré pour `http://localhost:5173` (dev Vite)
+
+### Proxy de développement
+Vite est configuré avec un proxy pour les appels API :
+```javascript
+'/api': {
+  target: 'http://localhost/finance-flow/backend/public',
+  changeOrigin: true
+}
+```
+
+## 🎨 Design System
+
+Le projet utilise une approche de design atomique avec :
+- **Atomes** : Composants de base (Button, Input, Label)
+- **Molécules** : Combinaisons d'atomes (LoginForm, Navbar)
+- **Organismes** : Sections complètes de page
+
+## 📱 Responsive Design
+
+- **Mobile First** - Design optimisé pour mobile d'abord
+- **Breakpoints Tailwind** - sm, md, lg, xl, 2xl
+- **Navigation adaptative** - Menu hamburger sur mobile
+
+## 🔒 Sécurité
+
+- **JWT Tokens** - Authentification stateless
+- **Validation côté client** - Prévention des erreurs utilisateur
+- **CORS configuré** - Protection contre les requêtes cross-origin malveillantes
+
+## 🚀 Déploiement
+
+```bash
+# Build optimisé pour la production
+npm run build
+
+# Le dossier dist/ contient les fichiers prêts pour le déploiement
+```
+
+## 📈 Performance
+
+- **Lazy Loading** - Chargement à la demande des composants
+- **Tree Shaking** - Élimination du code inutilisé
+- **Optimisation Vite** - Build ultra-rapide
+- **CSS optimisé** - Tailwind CSS purge automatique

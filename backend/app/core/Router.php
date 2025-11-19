@@ -88,9 +88,45 @@ class Router {
 
         // Nettoyer l'URI (enlever les paramètres GET)
         $requestPath = parse_url($requestUri, PHP_URL_PATH);
+        
+        // Debug: afficher les informations pour diagnostiquer
+        error_log("Original REQUEST_URI: " . $requestUri);
+        error_log("Parsed path: " . $requestPath);
+        error_log("SCRIPT_NAME: " . ($_SERVER['SCRIPT_NAME'] ?? 'NULL'));
+        
+        // Enlever le préfixe du chemin si on accède via un sous-dossier
+        // Méthode 1: Utiliser PATH_INFO si disponible
+        if (isset($_SERVER['PATH_INFO']) && !empty($_SERVER['PATH_INFO'])) {
+            $requestPath = $_SERVER['PATH_INFO'];
+            error_log("Using PATH_INFO: " . $requestPath);
+        } else {
+            // Méthode 2: Calculer manuellement
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+            $scriptDir = dirname($scriptName);
+            
+            // Si le chemin commence par le répertoire du script, l'enlever
+            if ($scriptDir !== '/' && strpos($requestPath, $scriptDir) === 0) {
+                $requestPath = substr($requestPath, strlen($scriptDir));
+            }
+            
+            // Enlever index.php du chemin si présent
+            if (strpos($requestPath, '/index.php') === 0) {
+                $requestPath = substr($requestPath, strlen('/index.php'));
+            }
+            
+            error_log("Calculated path: " . $requestPath);
+        }
+        
+        // S'assurer que le chemin commence par /
+        if (empty($requestPath) || strpos($requestPath, '/') !== 0) {
+            $requestPath = '/' . ltrim($requestPath, '/');
+        }
+        
+        error_log("Final processed path: " . $requestPath);
 
         // Chercher une route correspondante
         foreach ($this->routes as $route) {
+            error_log("Checking route: " . $route['path'] . " against: " . $requestPath);
             if ($route['method'] === $requestMethod && $this->matchPath($route['path'], $requestPath)) {
                 $params = $this->extractParams($route['path'], $requestPath);
                 $this->callHandler($route['handler'], $params);

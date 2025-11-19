@@ -8,6 +8,24 @@
  * @var FinanceFlow\Core\Router $router
  */
 
+// Route de test pour vérifier que le routeur fonctionne
+$router->get('/test', function() {
+    \FinanceFlow\Core\Response::success([
+        'message' => 'Routeur fonctionne !',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'method' => $_SERVER['REQUEST_METHOD'],
+        'uri' => $_SERVER['REQUEST_URI'],
+        'path' => parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
+    ], 'Test du routeur réussi');
+});
+
+$router->get('/api/test', function() {
+    \FinanceFlow\Core\Response::success([
+        'message' => 'API Test route fonctionne !',
+        'timestamp' => date('Y-m-d H:i:s')
+    ], 'API Test réussi');
+});
+
 // ================================
 // ROUTES UTILISATEUR
 // ================================

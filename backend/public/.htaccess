@@ -1,80 +1,23 @@
-# Finance Flow API - Configuration Apache
+# Configuration Apache simple pour Finance Flow API
+# Compatible WAMP Server
 
-# Activer le moteur de réécriture
 RewriteEngine On
 
-# Rediriger toutes les requêtes vers index.php
-# sauf si le fichier/dossier existe vraiment
+# Rediriger toutes les requêtes vers index.php (API REST)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
+RewriteRule ^(.*)$ index.php/$1 [QSA,L]
 
-# Configuration CORS pour le développement
-Header always set Access-Control-Allow-Origin "http://localhost:5173"
-Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-Header always set Access-Control-Allow-Credentials true
-Header always set Access-Control-Max-Age 86400
+# Configuration basique pour JSON
+AddType application/json .json
 
-# En-têtes de sécurité
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options DENY
-Header always set X-XSS-Protection "1; mode=block"
-Header always set Referrer-Policy "strict-origin-when-cross-origin"
+# Permettre l'affichage des dossiers si nécessaire (pour le développement)
+Options +Indexes
 
-# Désactiver l'affichage de la version Apache
-ServerTokens Prod
-Header unset Server
-
-# Configuration pour JSON
-<FilesMatch "\.(json)$">
-    Header set Content-Type "application/json; charset=utf-8"
-</FilesMatch>
-
-# Compression GZIP
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
-    AddOutputFilterByType DEFLATE application/json
-</IfModule>
-
-# Cache pour les ressources statiques
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType application/json "access plus 1 hour"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-</IfModule>
-
-# Bloquer l'accès aux fichiers sensibles
-<Files ~ "\.(env|log|ini)$">
-    Order allow,deny
-    Deny from all
-</Files>
-
-# Bloquer l'accès au dossier vendor de composer
-RewriteRule ^vendor/.*$ - [F,L]
-
-# Limiter les méthodes HTTP autorisées
-<LimitExcept GET POST PUT DELETE OPTIONS PATCH>
-    Order deny,allow
-    Deny from all
-</LimitExcept>
-
-# Configuration PHP (si mod_php est utilisé)
-<IfModule mod_php.c>
-    php_flag display_errors Off
-    php_flag log_errors On
-    php_value error_log /var/log/php_errors.log
-    php_value post_max_size 10M
-    php_value upload_max_filesize 10M
-    php_value max_execution_time 30
-    php_value memory_limit 128M
+# Headers CORS basiques (si mod_headers est disponible)
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "http://localhost:5173"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Allow-Credentials "true"
 </IfModule>

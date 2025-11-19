@@ -25,28 +25,27 @@ class UserRepository extends Repository
     public function create(array $data): ?int
     {
         try {
-            $sql = "INSERT INTO {$this->table} (username, email, password_hash, first_name, last_name, phone, avatar, is_active, is_verified, created_at, updated_at) 
-                    VALUES (:username, :email, :password_hash, :first_name, :last_name, :phone, :avatar, :is_active, :is_verified, NOW(), NOW())";
+            // Adapter aux colonnes existantes de la table
+            $sql = "INSERT INTO {$this->table} (name, email, password) 
+                    VALUES (:name, :email, :password)";
             
             $stmt = $this->pdo->prepare($sql);
             
+            // Utiliser 'name' au lieu de 'username' et 'password' au lieu de 'password_hash'
+            $name = $data['username'] ?? $data['name'] ?? '';
+            $password = $data['password_hash'] ?? $data['password'] ?? '';
+            
             $result = $stmt->execute([
-                'username' => $data['username'],
+                'name' => $name,
                 'email' => $data['email'],
-                'password_hash' => $data['password_hash'],
-                'first_name' => $data['first_name'] ?? null,
-                'last_name' => $data['last_name'] ?? null,
-                'phone' => $data['phone'] ?? null,
-                'avatar' => $data['avatar'] ?? null,
-                'is_active' => $data['is_active'] ?? 1,
-                'is_verified' => $data['is_verified'] ?? 0
+                'password' => $password
             ]);
 
             return $result ? (int) $this->pdo->lastInsertId() : null;
             
         } catch (Exception $e) {
             error_log("Erreur création utilisateur: " . $e->getMessage());
-            return null;
+            throw $e; // Re-throw pour debugging
         }
     }
     
@@ -59,7 +58,8 @@ class UserRepository extends Repository
             $fields = [];
             $params = ['id' => $id];
             
-            $allowedFields = ['username', 'email', 'password_hash', 'first_name', 'last_name', 'phone', 'avatar', 'is_verified', 'is_active'];
+            // Adapter aux colonnes existantes
+            $allowedFields = ['name', 'email', 'password'];
             
             foreach ($allowedFields as $field) {
                 if (array_key_exists($field, $data)) {
@@ -68,11 +68,20 @@ class UserRepository extends Repository
                 }
             }
             
+            // Mapper les anciens champs vers les nouveaux
+            if (array_key_exists('username', $data)) {
+                $fields[] = "name = :name";
+                $params['name'] = $data['username'];
+            }
+            if (array_key_exists('password_hash', $data)) {
+                $fields[] = "password = :password";
+                $params['password'] = $data['password_hash'];
+            }
+            
             if (empty($fields)) {
                 return false;
             }
             
-            $fields[] = "updated_at = NOW()";
             $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE {$this->primaryKey} = :id";
             
             $stmt = $this->pdo->prepare($sql);
@@ -89,7 +98,7 @@ class UserRepository extends Repository
      */
     public function findByEmail(string $email): ?array
     {
-        return $this->findBy(['email' => $email, 'is_active' => 1]);
+        return $this->findBy(['email' => $email]);
     }
     
     /**
@@ -97,15 +106,15 @@ class UserRepository extends Repository
      */
     public function findByUsername(string $username): ?array
     {
-        return $this->findBy(['username' => $username, 'is_active' => 1]);
+        return $this->findBy(['name' => $username]);
     }
     
     /**
-     * Trouver un utilisateur actif par ID
+     * Trouver un utilisateur par ID
      */
     public function findActiveById(int $id): ?array
     {
-        return $this->findBy(['id' => $id, 'is_active' => 1]);
+        return $this->findBy(['id' => $id]);
     }
     
     /**
@@ -113,12 +122,12 @@ class UserRepository extends Repository
      */
     public function emailExists(string $email, ?int $excludeId = null): bool
     {
-        $conditions = ['email' => $email, 'is_active' => 1];
+        $conditions = ['email' => $email];
         
         if ($excludeId) {
             // Pour les exclusions, on fait une requête custom
             try {
-                $sql = "SELECT COUNT(*) FROM {$this->table} WHERE email = :email AND is_active = 1 AND id != :exclude_id";
+                $sql = "SELECT COUNT(*) FROM {$this->table} WHERE email = :email AND id != :exclude_id";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute(['email' => $email, 'exclude_id' => $excludeId]);
                 return $stmt->fetchColumn() > 0;
@@ -136,14 +145,14 @@ class UserRepository extends Repository
      */
     public function usernameExists(string $username, ?int $excludeId = null): bool
     {
-        $conditions = ['username' => $username, 'is_active' => 1];
+        $conditions = ['name' => $username];
         
         if ($excludeId) {
             // Pour les exclusions, on fait une requête custom
             try {
-                $sql = "SELECT COUNT(*) FROM {$this->table} WHERE username = :username AND is_active = 1 AND id != :exclude_id";
+                $sql = "SELECT COUNT(*) FROM {$this->table} WHERE name = :name AND id != :exclude_id";
                 $stmt = $this->pdo->prepare($sql);
-                $stmt->execute(['username' => $username, 'exclude_id' => $excludeId]);
+                $stmt->execute(['name' => $username, 'exclude_id' => $excludeId]);
                 return $stmt->fetchColumn() > 0;
             } catch (Exception $e) {
                 error_log("Erreur vérification username: " . $e->getMessage());
@@ -155,27 +164,19 @@ class UserRepository extends Repository
     }
     
     /**
-     * Récupérer tous les utilisateurs actifs
+     * Récupérer tous les utilisateurs
      */
-    public function getAllActive(int $limit = null, int $offset = 0): array
+    public function getAllActive(?int $limit = null, int $offset = 0): array
     {
-        return $this->getAll(['is_active' => 1], $limit, $offset);
+        return $this->getAll([], $limit, $offset);
     }
     
     /**
-     * Compter les utilisateurs actifs
+     * Compter les utilisateurs
      */
     public function countActive(): int
     {
-        return $this->count(['is_active' => 1]);
-    }
-    
-    /**
-     * Marquer un email comme vérifié
-     */
-    public function markEmailAsVerified(int $userId): bool
-    {
-        return $this->update($userId, ['is_verified' => 1]);
+        return $this->count([]);
     }
     
     /**

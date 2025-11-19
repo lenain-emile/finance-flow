@@ -1,124 +1,73 @@
 <?php
 /**
- * Point d'entrée de l'API Finance Flow
+ * Point d'entrée principal de l'API Finance Flow
  * 
- * Ce fichier initialise l'application et gère le routage
+ * Ce fichier configure l'environnement, initialise l'autoloader Composer,
+ * configure CORS et démarre le routeur pour gérer les requêtes API.
  */
 
-// Autoloader Composer
-require_once __DIR__ . '/../vendor/autoload.php';
+// Headers de sécurité et CORS pour le développement
+header('Content-Type: application/json; charset=utf-8');
 
-// Charger la configuration d'environnement
+// Configuration d'erreur pour le développement
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Chargement de la configuration d'environnement
 require_once __DIR__ . '/../config/env.php';
 
-// Démarrer la session
-session_start();
+// Inclusion de l'autoloader Composer
+require_once __DIR__ . '/../vendor/autoload.php';
 
-// Charger les classes principales
+// Chargement des classes core
+require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/core/Response.php';
+require_once __DIR__ . '/../app/core/Router.php';
+
+// Chargement des modèles
+require_once __DIR__ . '/../app/models/User.php';
+
+// Chargement des services
+require_once __DIR__ . '/../app/services/Repository.php';
+require_once __DIR__ . '/../app/services/UserRepository.php';
+require_once __DIR__ . '/../app/services/ValidationService.php';
+require_once __DIR__ . '/../app/services/AuthService.php';
+require_once __DIR__ . '/../app/services/UserService.php';
+
+// Chargement des DTOs
+require_once __DIR__ . '/../app/DTOs/User/CreateUserRequest.php';
+require_once __DIR__ . '/../app/DTOs/User/UpdateUserRequest.php';
+require_once __DIR__ . '/../app/DTOs/User/UserResponse.php';
+
+// Chargement des middlewares
+require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
+
+// Chargement des contrôleurs
+require_once __DIR__ . '/../app/controllers/UserController.php';
+
 use FinanceFlow\Core\Router;
 use FinanceFlow\Core\Response;
-use FinanceFlow\Core\Database;
-use FinanceFlow\Middleware\AuthMiddleware;
 
 try {
-    // Configuration CORS et middlewares
-    AuthMiddleware::handleCors();
+    // Activation de CORS pour le développement avec Vite
+    Router::enableCors('http://localhost:5173');
     
-    // Logging des requêtes (en développement)
-    if ($_ENV['APP_DEBUG']) {
-        AuthMiddleware::logRequest();
-    }
-    
-    // Définir les en-têtes de sécurité
-    Response::setSecurityHeaders();
-    
-    // Créer le routeur
+    // Initialisation du routeur
     $router = new Router();
     
-    // Routes de base pour tester l'API
-    $router->get('/api', function() {
-        Response::success([
-            'name' => $_ENV['APP_NAME'],
-            'version' => '1.0.0',
-            'status' => 'running',
-            'environment' => $_ENV['APP_ENV'],
-            'timestamp' => date('Y-m-d H:i:s')
-        ], 'API Finance Flow opérationnelle');
-    });
+    // Chargement des routes depuis le fichier de configuration
+    $router->loadRoutes(__DIR__ . '/../routes/api.php');
     
-    $router->get('/api/health', function() {
-        $dbStatus = false;
-        $dbMessage = 'Non configuré';
-        
-        try {
-            $db = Database::getInstance();
-            $dbStatus = $db->testConnection();
-            $dbMessage = $dbStatus ? 'Connexion réussie' : 'Connexion échouée';
-        } catch (Exception $e) {
-            $dbMessage = 'Erreur: ' . $e->getMessage();
-        }
-        
-        Response::success([
-            'api' => 'running',
-            'database' => [
-                'status' => $dbStatus ? 'connected' : 'disconnected',
-                'message' => $dbMessage
-            ],
-            'environment' => $_ENV['APP_ENV'],
-            'php_version' => phpversion(),
-            'timestamp' => date('Y-m-d H:i:s'),
-            'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
-        ], 'Health check');
-    });
-    
-    // Route pour tester l'authentification
-    $router->get('/api/auth/test', function() {
-        $authMiddleware = new AuthMiddleware();
-        if ($authMiddleware->authenticate()) {
-            Response::success([
-                'user_id' => AuthMiddleware::getCurrentUserId(),
-                'email' => AuthMiddleware::getCurrentUserEmail(),
-                'username' => AuthMiddleware::getCurrentUsername(),
-                'timestamp' => date('Y-m-d H:i:s')
-            ], 'Authentification réussie');
-        }
-    });
-    
-    // Charger les routes depuis le fichier de routes
-    $routeFile = __DIR__ . '/../routes/api.php';
-    if (file_exists($routeFile)) {
-        $router->loadRoutes($routeFile);
-    }
-    
-    // Route pour les erreurs 404 de l'API
-    $router->get('/api/*', function() {
-        Response::notFound('Endpoint API non trouvé');
-    });
-    
-    // Exécuter le routeur
+    // Démarrage du routeur
     $router->run();
     
 } catch (Exception $e) {
     // Gestion des erreurs globales
-    if (Response::expectsJson()) {
-        $errorData = null;
-        
-        // En développement, inclure les détails de l'erreur
-        if ($_ENV['APP_DEBUG']) {
-            $errorData = [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ];
-        }
-        
-        Response::error('Une erreur inattendue s\'est produite', $errorData, 500);
-    } else {
-        http_response_code(500);
-        echo "Erreur 500 - Erreur interne du serveur";
-    }
-    
-    // Log l'erreur
-    error_log("Finance Flow API Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+    error_log("Erreur dans index.php: " . $e->getMessage());
+    Response::error('Erreur serveur interne', 500);
+} catch (Throwable $e) {
+    // Gestion des erreurs fatales
+    error_log("Erreur fatale dans index.php: " . $e->getMessage());
+    Response::error('Erreur serveur critique', 500);
 }
