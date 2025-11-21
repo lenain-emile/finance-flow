@@ -1,12 +1,23 @@
 import { useState } from "react"
-import { Button } from "@/components/atoms/button"
-import "@/styles/components/navbar.css"
+import { Button } from "../atoms/button"
+import { useAuth } from "../../hooks/useAuth"
+import "../../styles/components/navbar.css"
 
 export function Navbar({ currentPage = "home" }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error)
+    }
   }
 
   return (
@@ -50,6 +61,14 @@ export function Navbar({ currentPage = "home" }) {
               >
                 Transactions
               </a>
+              {isAuthenticated && (
+                <a
+                  href="/add-transaction"
+                  className={currentPage === "add-transaction" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
+                >
+                  Ajouter Transaction
+                </a>
+              )}
               <a
                 href="/analytics"
                 className={currentPage === "analytics" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
@@ -61,21 +80,41 @@ export function Navbar({ currentPage = "home" }) {
 
           {/* Actions - Desktop */}
           <div className="navbar__actions-desktop">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="navbar__btn-login"
-              onClick={() => window.location.href = '/login'}
-            >
-              Connexion
-            </Button>
-            <Button 
-              size="sm"
-              className="navbar__btn-register"
-              onClick={() => window.location.href = '/register'}
-            >
-              Inscription
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">
+                    Bonjour, {user?.name || user?.username || 'Utilisateur'}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="navbar__btn-logout"
+                    onClick={handleLogout}
+                  >
+                    Déconnexion
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="navbar__btn-login"
+                  onClick={() => window.location.href = '/login'}
+                >
+                  Connexion
+                </Button>
+                <Button 
+                  size="sm"
+                  className="navbar__btn-register"
+                  onClick={() => window.location.href = '/register'}
+                >
+                  Inscription
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -125,6 +164,14 @@ export function Navbar({ currentPage = "home" }) {
               >
                 💳 Transactions
               </a>
+              {isAuthenticated && (
+                <a
+                  href="/add-transaction"
+                  className={currentPage === "add-transaction" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
+                >
+                  ➕ Ajouter Transaction
+                </a>
+              )}
               <a
                 href="/analytics"
                 className={currentPage === "analytics" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
@@ -135,19 +182,38 @@ export function Navbar({ currentPage = "home" }) {
               {/* Mobile Actions */}
               <div className="navbar__mobile-actions">
                 <div className="navbar__mobile-buttons">
-                  <Button 
-                    variant="outline" 
-                    className="navbar__mobile-btn-login"
-                    onClick={() => window.location.href = '/login'}
-                  >
-                    Connexion
-                  </Button>
-                  <Button 
-                    className="navbar__mobile-btn-register"
-                    onClick={() => window.location.href = '/register'}
-                  >
-                    Inscription
-                  </Button>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="text-center mb-4">
+                        <span className="text-sm text-gray-600">
+                          Bonjour, {user?.name || user?.username || 'Utilisateur'}
+                        </span>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="navbar__mobile-btn-logout w-full"
+                        onClick={handleLogout}
+                      >
+                        Déconnexion
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        className="navbar__mobile-btn-login"
+                        onClick={() => window.location.href = '/login'}
+                      >
+                        Connexion
+                      </Button>
+                      <Button 
+                        className="navbar__mobile-btn-register"
+                        onClick={() => window.location.href = '/register'}
+                      >
+                        Inscription
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Navbar } from "@/components/molecules/navbar"
-import { LoginForm } from "@/components/molecules/login-form"
-import { useAuth } from "@/hooks/useAuth"
-import "@/styles/components/pages.css"
+import { Navbar } from "../molecules/navbar"
+import { LoginForm } from "../molecules/login-form"
+import { useAuth } from "../../hooks/useAuth"
+import "../../styles/components/pages.css"
 
 export function LoginPage() {
   const { login, isLoading, error, clearError } = useAuth()

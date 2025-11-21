@@ -1,6 +1,6 @@
-import { Button } from "@/components/atoms/button"
-import { InputWithError } from "@/components/molecules/input-with-error"
-import { useFormValidation } from "@/utils/form-validation"
+import { Button } from "../atoms/button"
+import { InputWithError } from "./input-with-error"
+import { useFormValidation } from "../../utils/form-validation"
 
 export function LoginForm({ onSubmit, isLoading = false, className = "" }) {
   const {

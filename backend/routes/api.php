@@ -8,24 +8,6 @@
  * @var FinanceFlow\Core\Router $router
  */
 
-// Route de test pour vérifier que le routeur fonctionne
-$router->get('/test', function() {
-    \FinanceFlow\Core\Response::success([
-        'message' => 'Routeur fonctionne !',
-        'timestamp' => date('Y-m-d H:i:s'),
-        'method' => $_SERVER['REQUEST_METHOD'],
-        'uri' => $_SERVER['REQUEST_URI'],
-        'path' => parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
-    ], 'Test du routeur réussi');
-});
-
-$router->get('/api/test', function() {
-    \FinanceFlow\Core\Response::success([
-        'message' => 'API Test route fonctionne !',
-        'timestamp' => date('Y-m-d H:i:s')
-    ], 'API Test réussi');
-});
-
 // ================================
 // ROUTES UTILISATEUR
 // ================================
@@ -55,12 +37,21 @@ $router->get('/api/users/check-email/{email}', 'UserController@checkEmailAvailab
 // Les routes spécifiques aux autres fonctionnalités seront ajoutées ici
 // au fur et à mesure du développement des branches feature/*
 
-// Transactions
-// $router->get('/api/transactions', 'TransactionController@index');
-// $router->post('/api/transactions', 'TransactionController@store');
-// $router->get('/api/transactions/{id}', 'TransactionController@show');
-// $router->put('/api/transactions/{id}', 'TransactionController@update');
-// $router->delete('/api/transactions/{id}', 'TransactionController@destroy');
+// ================================
+// ROUTES TRANSACTIONS
+// ================================
+
+// CRUD Transactions
+$router->post('/api/transactions', 'TransactionController@create');
+$router->get('/api/transactions', 'TransactionController@index');
+$router->get('/api/transactions/{id}', 'TransactionController@show');
+$router->put('/api/transactions/{id}', 'TransactionController@update');
+$router->delete('/api/transactions/{id}', 'TransactionController@delete');
+
+// Routes spécifiques transactions
+$router->get('/api/transactions/recent', 'TransactionController@recent');
+$router->get('/api/transactions/stats', 'TransactionController@stats');
+$router->get('/api/transactions/total', 'TransactionController@total');
 
 // Catégories
 // $router->get('/api/categories', 'CategoryController@index');

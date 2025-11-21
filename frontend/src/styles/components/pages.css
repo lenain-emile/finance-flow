@@ -105,6 +105,69 @@
   text-decoration: underline;
 }
 
+/* Transaction Page Specific */
+.transaction-page__navigation {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.transaction-page__help {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.transaction-page__help-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.transaction-page__help-link {
+  color: #C38EF0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.transaction-page__help-link:hover {
+  color: #B570E8;
+  text-decoration: underline;
+}
+
+/* Transaction Form Specific */
+.transaction-form__section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.transaction-form__section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.transaction-form__character-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  text-align: right;
+}
+
+/* Responsive adjustments for transaction pages */
+@media (min-width: 768px) {
+  .page__container--transaction {
+    max-width: 36rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page__container--transaction {
+    max-width: 42rem;
+  }
+}
+
 /* Background Decoration */
 .page__bg-decoration {
   position: fixed;

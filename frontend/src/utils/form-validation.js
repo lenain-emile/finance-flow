@@ -16,6 +16,32 @@ export const validationRules = {
   password: {
     required: "Le mot de passe est requis",
     minLength: { value: 8, message: "Le mot de passe doit contenir au moins 8 caractères" }
+  },
+  // Règles de validation pour les transactions
+  title: {
+    required: "Le titre est requis",
+    maxLength: { value: 150, message: "Le titre ne peut pas dépasser 150 caractères" }
+  },
+  amount: {
+    required: "Le montant est requis",
+    pattern: { 
+      value: /^\d+(\.\d{1,2})?$/, 
+      message: "Le montant doit être un nombre positif (ex: 10.50)" 
+    },
+    min: { value: 0.01, message: "Le montant doit être supérieur à 0" }
+  },
+  date: {
+    required: "La date est requise",
+    pattern: { 
+      value: /^\d{4}-\d{2}-\d{2}$/, 
+      message: "Format de date invalide (YYYY-MM-DD)" 
+    }
+  },
+  description: {
+    maxLength: { value: 1000, message: "La description ne peut pas dépasser 1000 caractères" }
+  },
+  location: {
+    maxLength: { value: 100, message: "Le lieu ne peut pas dépasser 100 caractères" }
   }
 }
 
@@ -34,9 +60,19 @@ export const validateField = (fieldName, value, rules = validationRules) => {
     return fieldRules.minLength.message
   }
 
+  // Validation maxLength
+  if (fieldRules.maxLength && value && value.length > fieldRules.maxLength.value) {
+    return fieldRules.maxLength.message
+  }
+
   // Validation pattern (regex)
   if (fieldRules.pattern && value && !fieldRules.pattern.value.test(value)) {
     return fieldRules.pattern.message
+  }
+
+  // Validation min (pour les nombres)
+  if (fieldRules.min && value && parseFloat(value) < fieldRules.min.value) {
+    return fieldRules.min.message
   }
 
   return null
