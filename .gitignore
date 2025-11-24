@@ -112,6 +112,7 @@ temp/
 /vendor/
 composer.phar
 composer.lock
+.phpunit.result.cache
 
 # Database
 *.sql

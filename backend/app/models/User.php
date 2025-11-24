@@ -108,35 +108,4 @@ class User
     {
         return (new self())->loadFromArray($data);
     }
-
-    /**
-     * Obtenir le nom complet
-     */
-    public function getFullName(): string
-    {
-        $parts = array_filter([$this->firstName, $this->lastName]);
-        return implode(' ', $parts) ?: $this->username;
-    }
-
-    /**
-     * Vérifier si l'utilisateur a un nom complet
-     */
-    public function hasFullName(): bool
-    {
-        return !empty($this->firstName) || !empty($this->lastName);
-    }
-
-    /**
-     * Obtenir l'initiales
-     */
-    public function getInitials(): string
-    {
-        if ($this->hasFullName()) {
-            $first = $this->firstName ? strtoupper($this->firstName[0]) : '';
-            $last = $this->lastName ? strtoupper($this->lastName[0]) : '';
-            return $first . $last;
-        }
-        
-        return $this->username ? strtoupper(substr($this->username, 0, 2)) : 'U';
-    }
 }

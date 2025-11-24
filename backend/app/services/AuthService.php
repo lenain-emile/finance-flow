@@ -91,8 +91,8 @@ class AuthService
         try {
             $decoded = JWT::decode($token, new Key($this->secretKey, $this->algorithm));
             
-            // Vérifier le type de token
-            if (!isset($decoded->type) || $decoded->type !== 'refresh_token') {
+            // Vérifier le type de token (peut être 'refresh_token' ou 'refresh')
+            if (!isset($decoded->type) || !in_array($decoded->type, ['refresh_token', 'refresh'])) {
                 return null;
             }
 

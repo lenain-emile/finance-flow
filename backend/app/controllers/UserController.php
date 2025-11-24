@@ -3,7 +3,7 @@
 namespace FinanceFlow\Controllers;
 
 use FinanceFlow\Services\UserService;
-use FinanceFlow\Services\UserRepository;
+use FinanceFlow\Repositories\UserRepository;
 use FinanceFlow\Services\AuthService;
 use FinanceFlow\Middleware\AuthMiddleware;
 use FinanceFlow\Core\Response;

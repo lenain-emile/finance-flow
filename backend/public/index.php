@@ -17,34 +17,8 @@ error_reporting(E_ALL);
 // Chargement de la configuration d'environnement
 require_once __DIR__ . '/../config/env.php';
 
-// Inclusion de l'autoloader Composer
+// Inclusion de l'autoloader Composer (PSR-4 autoloading gère toutes les classes)
 require_once __DIR__ . '/../vendor/autoload.php';
-
-// Chargement des classes core
-require_once __DIR__ . '/../app/core/Database.php';
-require_once __DIR__ . '/../app/core/Response.php';
-require_once __DIR__ . '/../app/core/Router.php';
-
-// Chargement des modèles
-require_once __DIR__ . '/../app/models/User.php';
-
-// Chargement des services
-require_once __DIR__ . '/../app/services/Repository.php';
-require_once __DIR__ . '/../app/services/UserRepository.php';
-require_once __DIR__ . '/../app/services/ValidationService.php';
-require_once __DIR__ . '/../app/services/AuthService.php';
-require_once __DIR__ . '/../app/services/UserService.php';
-
-// Chargement des DTOs
-require_once __DIR__ . '/../app/DTOs/User/CreateUserRequest.php';
-require_once __DIR__ . '/../app/DTOs/User/UpdateUserRequest.php';
-require_once __DIR__ . '/../app/DTOs/User/UserResponse.php';
-
-// Chargement des middlewares
-require_once __DIR__ . '/../app/Middleware/AuthMiddleware.php';
-
-// Chargement des contrôleurs
-require_once __DIR__ . '/../app/controllers/UserController.php';
 
 use FinanceFlow\Core\Router;
 use FinanceFlow\Core\Response;

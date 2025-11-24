@@ -13,7 +13,13 @@ class Database {
     private $pdo;
 
     private function __construct() {
-        $config = require __DIR__ . '/../../config/database.php';
+        $configFile = __DIR__ . '/../../config/database.php';
+        
+        if (!file_exists($configFile)) {
+            throw new Exception('Fichier de configuration database.php introuvable');
+        }
+        
+        $config = require $configFile;
         $dbConfig = $config['database'];
         
         $dsn = "mysql:host={$dbConfig['host']};port={$dbConfig['port']};dbname={$dbConfig['dbname']};charset={$dbConfig['charset']}";

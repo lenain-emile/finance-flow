@@ -2,7 +2,9 @@
 
 namespace FinanceFlow\Services;
 
-use FinanceFlow\Services\{TransactionRepository, ValidationService};
+use FinanceFlow\Repositories\TransactionRepository;
+use FinanceFlow\Models\Transaction;
+use FinanceFlow\Services\ValidationService;
 use FinanceFlow\DTOs\Transaction\{CreateTransactionRequest, UpdateTransactionRequest, TransactionResponse};
 use Exception;
 
@@ -24,7 +26,7 @@ class TransactionService
     /**
      * Créer une nouvelle transaction
      */
-    public function createTransaction(CreateTransactionRequest $request, int $userId): array
+    public function createTransaction(CreateTransactionRequest $request, int $userId): Transaction
     {
         try {
             // Le DTO a déjà sa propre validation, mais on peut ajouter des validations business ici
@@ -41,7 +43,7 @@ class TransactionService
                 throw new Exception('Erreur lors de la création de la transaction', 500);
             }
 
-            // Récupérer la transaction créée
+            // Récupérer la transaction créée (objet Transaction)
             $transaction = $this->transactionRepository->findByIdAndUserId($transactionId, $userId);
             if (!$transaction) {
                 throw new Exception('Transaction créée mais impossible de la récupérer', 500);
@@ -56,22 +58,19 @@ class TransactionService
     }
 
     /**
-     * Récupérer les transactions d'un utilisateur
+     * Récupérer les transactions d'un utilisateur (utiliser getFilteredAndSortedTransactions à la place)
+     * @deprecated Utiliser getFilteredAndSortedTransactions() avec filtres vides
+     * @return Transaction[]
      */
     public function getUserTransactions(int $userId, ?int $limit = null, int $offset = 0): array
     {
-        try {
-            return $this->transactionRepository->getByUserId($userId, $limit, $offset);
-        } catch (Exception $e) {
-            error_log("Erreur récupération transactions: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->getFilteredAndSortedTransactions($userId, [], 'date', 'DESC', $limit, $offset)['transactions'];
     }
 
     /**
      * Récupérer une transaction par ID
      */
-    public function getTransaction(int $id, int $userId): ?array
+    public function getTransaction(int $id, int $userId): Transaction
     {
         try {
             $transaction = $this->transactionRepository->findByIdAndUserId($id, $userId);
@@ -88,7 +87,7 @@ class TransactionService
     /**
      * Mettre à jour une transaction
      */
-    public function updateTransaction(int $id, UpdateTransactionRequest $request, int $userId): array
+    public function updateTransaction(int $id, UpdateTransactionRequest $request, int $userId): Transaction
     {
         try {
             // Vérifier que la transaction existe et appartient à l'utilisateur
@@ -116,7 +115,7 @@ class TransactionService
                 throw new Exception('Erreur lors de la mise à jour de la transaction', 500);
             }
 
-            // Récupérer la transaction mise à jour
+            // Récupérer la transaction mise à jour (objet Transaction)
             return $this->transactionRepository->findByIdAndUserId($id, $userId);
 
         } catch (Exception $e) {
@@ -147,24 +146,20 @@ class TransactionService
 
     /**
      * Récupérer les transactions par plage de dates
+     * @deprecated Utiliser getFilteredAndSortedTransactions() avec start_date/end_date
      */
     public function getTransactionsByDateRange(int $userId, string $startDate, string $endDate): array
     {
-        try {
-            // Validation des dates
-            if (!strtotime($startDate) || !strtotime($endDate)) {
-                throw new Exception('Format de date invalide', 400);
-            }
-
-            if ($startDate > $endDate) {
-                throw new Exception('La date de début doit être antérieure à la date de fin', 400);
-            }
-
-            return $this->transactionRepository->getByDateRange($userId, $startDate, $endDate);
-        } catch (Exception $e) {
-            error_log("Erreur récupération transactions par date: " . $e->getMessage());
-            throw $e;
+        if (!strtotime($startDate) || !strtotime($endDate)) {
+            throw new Exception('Format de date invalide', 400);
         }
+        if ($startDate > $endDate) {
+            throw new Exception('La date de début doit être antérieure à la date de fin', 400);
+        }
+        return $this->getFilteredAndSortedTransactions(
+            $userId,
+            ['start_date' => $startDate, 'end_date' => $endDate]
+        )['transactions'];
     }
 
     /**
@@ -185,12 +180,14 @@ class TransactionService
      */
     public function getRecentTransactions(int $userId, int $limit = 10): array
     {
-        try {
-            return $this->transactionRepository->getRecentTransactions($userId, $limit);
-        } catch (Exception $e) {
-            error_log("Erreur récupération transactions récentes: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->getFilteredAndSortedTransactions(
+            $userId,
+            [],
+            'date',
+            'DESC',
+            $limit,
+            0
+        )['transactions'];
     }
 
     /**
@@ -198,16 +195,13 @@ class TransactionService
      */
     public function searchTransactions(int $userId, string $searchTerm): array
     {
-        try {
-            if (strlen($searchTerm) < 2) {
-                throw new Exception('Le terme de recherche doit contenir au moins 2 caractères', 400);
-            }
-
-            return $this->transactionRepository->searchTransactions($userId, $searchTerm);
-        } catch (Exception $e) {
-            error_log("Erreur recherche transactions: " . $e->getMessage());
-            throw $e;
+        if (strlen($searchTerm) < 2) {
+            throw new Exception('Le terme de recherche doit contenir au moins 2 caractères', 400);
         }
+        return $this->getFilteredAndSortedTransactions(
+            $userId,
+            ['search' => $searchTerm]
+        )['transactions'];
     }
 
     /**
@@ -217,19 +211,23 @@ class TransactionService
     {
         try {
             $totalAmount = $this->transactionRepository->getTotalAmount($userId);
-            $totalCount = $this->transactionRepository->countByUserId($userId);
-            $recentTransactions = $this->transactionRepository->getRecentTransactions($userId, 5);
+            $allTransactions = $this->getFilteredAndSortedTransactions($userId)['transactions'];
+            $totalCount = count($allTransactions);
+            $recentTransactions = array_slice($allTransactions, 0, 5);
 
             // Calculer les totaux par mois (30 derniers jours)
             $startDate = date('Y-m-d', strtotime('-30 days'));
             $endDate = date('Y-m-d');
             $monthlyAmount = $this->transactionRepository->getTotalAmount($userId, $startDate, $endDate);
 
+            // getFilteredAndSortedTransactions() retourne déjà des arrays, pas besoin de convertir
+            $recentTransactionsArray = $recentTransactions;
+
             return [
                 'total_amount' => $totalAmount,
                 'total_count' => $totalCount,
                 'monthly_amount' => $monthlyAmount,
-                'recent_transactions' => $recentTransactions,
+                'recent_transactions' => $recentTransactionsArray,
                 'average_amount' => $totalCount > 0 ? $totalAmount / $totalCount : 0
             ];
         } catch (Exception $e) {
@@ -238,7 +236,85 @@ class TransactionService
         }
     }
 
-
+    /**
+     * Récupérer les transactions avec filtres et tri avancés
+     * 
+     * @param int $userId ID de l'utilisateur
+     * @param array $filters Filtres à appliquer
+     * @param string $sortBy Colonne de tri
+     * @param string $sortOrder Ordre de tri (ASC/DESC)
+     * @param int|null $limit Limite de résultats
+     * @param int $offset Offset pour pagination
+     * @return array
+     */
+    public function getFilteredAndSortedTransactions(
+        int $userId,
+        array $filters = [],
+        string $sortBy = 'date',
+        string $sortOrder = 'DESC',
+        ?int $limit = null,
+        int $offset = 0
+    ): array {
+        try {
+            // Valider les paramètres de tri
+            $allowedSortColumns = ['date', 'amount', 'title', 'category_id', 'sub_category_id'];
+            if (!in_array($sortBy, $allowedSortColumns)) {
+                throw new Exception("Colonne de tri invalide: {$sortBy}", 400);
+            }
+            
+            $sortOrder = strtoupper($sortOrder);
+            if (!in_array($sortOrder, ['ASC', 'DESC'])) {
+                throw new Exception("Ordre de tri invalide: {$sortOrder}", 400);
+            }
+            
+            // Valider les filtres de montant
+            if (isset($filters['min_amount']) && isset($filters['max_amount'])) {
+                if ((float)$filters['min_amount'] > (float)$filters['max_amount']) {
+                    throw new Exception('Le montant minimum ne peut pas être supérieur au montant maximum', 400);
+                }
+            }
+            
+            // Valider les filtres de date
+            if (isset($filters['start_date']) && isset($filters['end_date'])) {
+                if ($filters['start_date'] > $filters['end_date']) {
+                    throw new Exception('La date de début doit être antérieure à la date de fin', 400);
+                }
+            }
+            
+            $transactions = $this->transactionRepository->getFilteredAndSorted(
+                $userId,
+                $filters,
+                $sortBy,
+                $sortOrder,
+                $limit,
+                $offset
+            );
+            
+            $totalCount = $this->transactionRepository->countFiltered($userId, $filters);
+            
+            // Convertir les objets Transaction en tableaux
+            $transactionsArray = array_map(fn(Transaction $t) => $t->toArray(), $transactions);
+            
+            return [
+                'transactions' => $transactionsArray,
+                'total' => $totalCount,
+                'filters_applied' => $filters,
+                'sort' => [
+                    'by' => $sortBy,
+                    'order' => $sortOrder
+                ],
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => $limit ? ($offset + $limit < $totalCount) : false
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Erreur getFilteredAndSortedTransactions: " . $e->getMessage());
+            throw $e;
+        }
+    }
 
     /**
      * Préparer les données de transaction depuis un DTO pour la création

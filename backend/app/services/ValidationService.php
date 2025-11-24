@@ -2,7 +2,7 @@
 
 namespace FinanceFlow\Services;
 
-use FinanceFlow\Services\UserRepository;
+use FinanceFlow\Repositories\UserRepository;
 
 class ValidationService
 {
@@ -60,49 +60,44 @@ class ValidationService
         ];
     }
 
+    /**
+     * Valider uniquement l'unicité du nom d'utilisateur
+     * (Les autres validations sont dans CreateUserRequest/UpdateUserRequest)
+     */
     private function validateUsername(string $username, ?int $excludeUserId = null): array
     {
         $errors = [];
 
-        if (empty($username)) {
-            $errors['username'] = 'Le nom d\'utilisateur est requis';
-        } elseif (strlen($username) < 3) {
-            $errors['username'] = 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
-        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
-            $errors['username'] = 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et tirets bas';
-        } elseif ($this->userRepository->usernameExists($username, $excludeUserId)) {
+        if (!empty($username) && $this->userRepository->usernameExists($username, $excludeUserId)) {
             $errors['username'] = 'Ce nom d\'utilisateur est déjà pris';
         }
 
         return $errors;
     }
 
+    /**
+     * Valider uniquement l'unicité de l'email
+     * (Les autres validations sont dans CreateUserRequest/UpdateUserRequest)
+     */
     private function validateEmail(string $email, ?int $excludeUserId = null): array
     {
         $errors = [];
 
-        if (empty($email)) {
-            $errors['email'] = 'L\'email est requis';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Format d\'email invalide';
-        } elseif ($this->userRepository->emailExists($email, $excludeUserId)) {
+        if (!empty($email) && $this->userRepository->emailExists($email, $excludeUserId)) {
             $errors['email'] = 'Cette adresse email est déjà utilisée';
         }
 
         return $errors;
     }
 
+    /**
+     * Validation mot de passe simplifiée
+     * (Les validations de format sont dans CreateUserRequest/UpdateUserRequest)
+     */
     private function validatePassword(string $password, bool $isUpdate): array
     {
-        $errors = [];
-
-        if (!$isUpdate && empty($password)) {
-            $errors['password'] = 'Le mot de passe est requis';
-        } elseif (!empty($password) && strlen($password) < 8) {
-            $errors['password'] = 'Le mot de passe doit contenir au moins 8 caractères';
-        }
-
-        return $errors;
+        // Plus de validation ici - les DTOs s'en chargent
+        return [];
     }
 
     private function validateOptionalFields(array $data): array

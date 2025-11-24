@@ -1,6 +1,6 @@
 <?php
 
-namespace FinanceFlow\Services;
+namespace FinanceFlow\Core;
 
 use FinanceFlow\Core\Database;
 use PDO;
@@ -15,7 +15,7 @@ abstract class Repository
     protected string $table;
     protected string $primaryKey = 'id';
     
-    public function __construct(string $table = null) 
+    public function __construct(?string $table = null) 
     {
         $database = Database::getInstance();
         $this->pdo = $database->getConnection();
@@ -31,7 +31,7 @@ abstract class Repository
     /**
      * Récupérer tous les enregistrements
      */
-    public function getAll(array $conditions = [], int $limit = null, int $offset = 0): array
+    public function getAll(array $conditions = [], ?int $limit = null, int $offset = 0): array
     {
         try {
             $sql = "SELECT * FROM {$this->table}";
@@ -120,90 +120,7 @@ abstract class Repository
         }
     }
     
-    /**
-     * Supprimer un enregistrement par ID
-     */
-    public function delete(int $id): bool
-    {
-        try {
-            // Vérifier s'il y a une colonne is_active pour soft delete
-            if ($this->hasColumn('is_active')) {
-                return $this->softDelete($id);
-            } else {
-                return $this->hardDelete($id);
-            }
-        } catch (Exception $e) {
-            error_log("Erreur delete dans {$this->table}: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Soft delete (marquer comme inactif)
-     */
-    protected function softDelete(int $id): bool
-    {
-        try {
-            $updateFields = ['is_active = 0'];
-            
-            if ($this->hasColumn('updated_at')) {
-                $updateFields[] = 'updated_at = NOW()';
-            }
-            
-            $sql = "UPDATE {$this->table} SET " . implode(', ', $updateFields) . " WHERE {$this->primaryKey} = :id";
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute(['id' => $id]);
-            
-        } catch (Exception $e) {
-            error_log("Erreur softDelete dans {$this->table}: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Hard delete (suppression physique)
-     */
-    protected function hardDelete(int $id): bool
-    {
-        try {
-            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute(['id' => $id]);
-            
-        } catch (Exception $e) {
-            error_log("Erreur hardDelete dans {$this->table}: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Compter les enregistrements
-     */
-    public function count(array $conditions = []): int
-    {
-        try {
-            $sql = "SELECT COUNT(*) FROM {$this->table}";
-            $params = [];
-            
-            if (!empty($conditions)) {
-                $whereClause = [];
-                foreach ($conditions as $field => $value) {
-                    $whereClause[] = "$field = :$field";
-                    $params[$field] = $value;
-                }
-                $sql .= " WHERE " . implode(' AND ', $whereClause);
-            }
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            
-            return (int) $stmt->fetchColumn();
-            
-        } catch (Exception $e) {
-            error_log("Erreur count dans {$this->table}: " . $e->getMessage());
-            return 0;
-        }
-    }
+
     
     /**
      * Vérifier si une colonne existe dans la table
@@ -222,11 +139,4 @@ abstract class Repository
         }
     }
     
-    /**
-     * Vérifier si un enregistrement existe
-     */
-    public function exists(array $conditions): bool
-    {
-        return $this->count($conditions) > 0;
-    }
 }

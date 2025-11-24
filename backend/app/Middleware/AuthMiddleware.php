@@ -87,6 +87,7 @@ class AuthMiddleware
 
     /**
      * Rate limiting simple basé sur IP
+     * Utilise un fichier temporaire pour éviter les sessions dans une API REST
      * @param int $maxAttempts Nombre maximum de tentatives
      * @param int $windowMinutes Fenêtre de temps en minutes
      * @return bool
@@ -94,27 +95,27 @@ class AuthMiddleware
     public static function rateLimit(int $maxAttempts = 10, int $windowMinutes = 1): bool
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $key = 'rate_limit_' . md5($ip);
-        
-        // En production, vous utiliseriez Redis ou une autre solution de cache
-        // Ici, nous utilisons une simulation avec les sessions
-        session_start();
+        $key = md5($ip);
+        $rateLimitFile = sys_get_temp_dir() . '/finance_flow_rate_limit_' . $key . '.json';
         
         $now = time();
-        $window = $windowMinutes * 60; // Convertir en secondes
+        $window = $windowMinutes * 60;
         
-        if (!isset($_SESSION[$key])) {
-            $_SESSION[$key] = [];
+        // Charger les tentatives existantes
+        $attempts = [];
+        if (file_exists($rateLimitFile)) {
+            $content = file_get_contents($rateLimitFile);
+            $attempts = json_decode($content, true) ?: [];
         }
         
         // Nettoyer les tentatives anciennes
-        $_SESSION[$key] = array_filter($_SESSION[$key], function($timestamp) use ($now, $window) {
+        $attempts = array_filter($attempts, function($timestamp) use ($now, $window) {
             return ($now - $timestamp) < $window;
         });
         
         // Vérifier le nombre de tentatives
-        if (count($_SESSION[$key]) >= $maxAttempts) {
-            $retryAfter = $window - ($now - min($_SESSION[$key]));
+        if (count($attempts) >= $maxAttempts) {
+            $retryAfter = $window - ($now - min($attempts));
             header("Retry-After: {$retryAfter}");
             Response::error(
                 "Trop de tentatives. Réessayez dans {$retryAfter} secondes.",
@@ -124,8 +125,9 @@ class AuthMiddleware
             return false;
         }
         
-        // Ajouter la tentative actuelle
-        $_SESSION[$key][] = $now;
+        // Ajouter la tentative actuelle et sauvegarder
+        $attempts[] = $now;
+        file_put_contents($rateLimitFile, json_encode($attempts));
         
         return true;
     }

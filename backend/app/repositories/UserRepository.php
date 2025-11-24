@@ -1,7 +1,8 @@
 <?php
 
-namespace FinanceFlow\Services;
+namespace FinanceFlow\Repositories;
 
+use FinanceFlow\Core\Repository;
 use FinanceFlow\Models\User;
 use Exception;
 
@@ -25,20 +26,15 @@ class UserRepository extends Repository
     public function create(array $data): ?int
     {
         try {
-            // Adapter aux colonnes existantes de la table
             $sql = "INSERT INTO {$this->table} (name, email, password) 
                     VALUES (:name, :email, :password)";
             
             $stmt = $this->pdo->prepare($sql);
             
-            // Utiliser 'name' au lieu de 'username' et 'password' au lieu de 'password_hash'
-            $name = $data['username'] ?? $data['name'] ?? '';
-            $password = $data['password_hash'] ?? $data['password'] ?? '';
-            
             $result = $stmt->execute([
-                'name' => $name,
+                'name' => $data['username'],
                 'email' => $data['email'],
-                'password' => $password
+                'password' => $data['password_hash']
             ]);
 
             return $result ? (int) $this->pdo->lastInsertId() : null;
@@ -58,24 +54,22 @@ class UserRepository extends Repository
             $fields = [];
             $params = ['id' => $id];
             
-            // Adapter aux colonnes existantes
-            $allowedFields = ['name', 'email', 'password'];
-            
-            foreach ($allowedFields as $field) {
-                if (array_key_exists($field, $data)) {
-                    $fields[] = "$field = :$field";
-                    $params[$field] = $data[$field];
-                }
-            }
-            
-            // Mapper les anciens champs vers les nouveaux
+            // Mapper username -> name (colonne DB)
             if (array_key_exists('username', $data)) {
                 $fields[] = "name = :name";
                 $params['name'] = $data['username'];
             }
+            
+            // Mapper password_hash -> password (colonne DB)
             if (array_key_exists('password_hash', $data)) {
                 $fields[] = "password = :password";
                 $params['password'] = $data['password_hash'];
+            }
+            
+            // Email reste identique
+            if (array_key_exists('email', $data)) {
+                $fields[] = "email = :email";
+                $params['email'] = $data['email'];
             }
             
             if (empty($fields)) {
@@ -122,10 +116,7 @@ class UserRepository extends Repository
      */
     public function emailExists(string $email, ?int $excludeId = null): bool
     {
-        $conditions = ['email' => $email];
-        
         if ($excludeId) {
-            // Pour les exclusions, on fait une requête custom
             try {
                 $sql = "SELECT COUNT(*) FROM {$this->table} WHERE email = :email AND id != :exclude_id";
                 $stmt = $this->pdo->prepare($sql);
@@ -137,7 +128,7 @@ class UserRepository extends Repository
             }
         }
         
-        return $this->exists($conditions);
+        return $this->findBy(['email' => $email]) !== null;
     }
     
     /**
@@ -160,23 +151,22 @@ class UserRepository extends Repository
             }
         }
         
-        return $this->exists($conditions);
+        return $this->findBy(['name' => $username]) !== null;
     }
     
     /**
-     * Récupérer tous les utilisateurs
+     * Supprimer un utilisateur
      */
-    public function getAllActive(?int $limit = null, int $offset = 0): array
+    public function delete(int $id): bool
     {
-        return $this->getAll([], $limit, $offset);
-    }
-    
-    /**
-     * Compter les utilisateurs
-     */
-    public function countActive(): int
-    {
-        return $this->count([]);
+        try {
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute(['id' => $id]);
+        } catch (Exception $e) {
+            error_log("Erreur suppression utilisateur: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**

@@ -1,7 +1,9 @@
 <?php
 
-namespace FinanceFlow\Services;
+namespace FinanceFlow\Repositories;
 
+use FinanceFlow\Core\Repository;
+use FinanceFlow\Models\Transaction;
 use Exception;
 
 /**
@@ -85,66 +87,27 @@ class TransactionRepository extends Repository
     }
     
     /**
-     * Récupérer les transactions d'un utilisateur
+     * Supprimer une transaction
      */
-    public function getByUserId(int $userId, ?int $limit = null, int $offset = 0): array
+    public function delete(int $id): bool
     {
         try {
-            $sql = "SELECT * FROM {$this->table} WHERE user_id = :user_id ORDER BY date DESC";
-            
-            if ($limit) {
-                $sql .= " LIMIT :limit OFFSET :offset";
-            }
-            
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
             $stmt = $this->pdo->prepare($sql);
-            $params = ['user_id' => $userId];
-            
-            if ($limit) {
-                $params['limit'] = $limit;
-                $params['offset'] = $offset;
-            }
-            
-            $stmt->execute($params);
-            return $stmt->fetchAll();
-            
+            return $stmt->execute(['id' => $id]);
         } catch (Exception $e) {
-            error_log("Erreur récupération transactions utilisateur: " . $e->getMessage());
-            return [];
+            error_log("Erreur suppression transaction: " . $e->getMessage());
+            return false;
         }
     }
     
     /**
      * Récupérer une transaction par ID et user_id (sécurité)
      */
-    public function findByIdAndUserId(int $id, int $userId): ?array
+    public function findByIdAndUserId(int $id, int $userId): ?Transaction
     {
-        return $this->findBy(['id' => $id, 'user_id' => $userId]);
-    }
-    
-    /**
-     * Récupérer les transactions par plage de dates
-     */
-    public function getByDateRange(int $userId, string $startDate, string $endDate): array
-    {
-        try {
-            $sql = "SELECT * FROM {$this->table} 
-                    WHERE user_id = :user_id 
-                    AND date BETWEEN :start_date AND :end_date 
-                    ORDER BY date DESC";
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([
-                'user_id' => $userId,
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ]);
-            
-            return $stmt->fetchAll();
-            
-        } catch (Exception $e) {
-            error_log("Erreur récupération transactions par date: " . $e->getMessage());
-            return [];
-        }
+        $data = $this->findBy(['id' => $id, 'user_id' => $userId]);
+        return $data ? Transaction::fromArray($data) : null;
     }
     
     /**
@@ -174,94 +137,6 @@ class TransactionRepository extends Repository
         }
     }
     
-    /**
-     * Récupérer les dernières transactions d'un utilisateur
-     */
-    public function getRecentTransactions(int $userId, int $limit = 10): array
-    {
-        return $this->getByUserId($userId, $limit, 0);
-    }
-    
-    /**
-     * Rechercher des transactions par titre ou description
-     */
-    public function searchTransactions(int $userId, string $searchTerm): array
-    {
-        try {
-            $sql = "SELECT * FROM {$this->table} 
-                    WHERE user_id = :user_id 
-                    AND (title LIKE :search OR description LIKE :search)
-                    ORDER BY date DESC";
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([
-                'user_id' => $userId,
-                'search' => '%' . $searchTerm . '%'
-            ]);
-            
-            return $stmt->fetchAll();
-            
-        } catch (Exception $e) {
-            error_log("Erreur recherche transactions: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Construire les conditions WHERE pour les filtres
-     * Méthode privée pour éviter la duplication de code
-     * 
-     * @param array $filters Filtres à appliquer
-     * @param array &$params Paramètres PDO par référence
-     * @return string Clause SQL à ajouter après WHERE
-     */
-    private function buildFilterConditions(array $filters, array &$params): string
-    {
-        $conditions = [];
-        
-        if (!empty($filters['category_id'])) {
-            $conditions[] = "category_id = :category_id";
-            $params['category_id'] = (int) $filters['category_id'];
-        }
-        
-        if (!empty($filters['sub_category_id'])) {
-            $conditions[] = "sub_category_id = :sub_category_id";
-            $params['sub_category_id'] = (int) $filters['sub_category_id'];
-        }
-        
-        if (!empty($filters['account_id'])) {
-            $conditions[] = "account_id = :account_id";
-            $params['account_id'] = (int) $filters['account_id'];
-        }
-        
-        if (isset($filters['min_amount']) && $filters['min_amount'] !== '') {
-            $conditions[] = "amount >= :min_amount";
-            $params['min_amount'] = (float) $filters['min_amount'];
-        }
-        
-        if (isset($filters['max_amount']) && $filters['max_amount'] !== '') {
-            $conditions[] = "amount <= :max_amount";
-            $params['max_amount'] = (float) $filters['max_amount'];
-        }
-        
-        if (!empty($filters['start_date'])) {
-            $conditions[] = "date >= :start_date";
-            $params['start_date'] = $filters['start_date'];
-        }
-        
-        if (!empty($filters['end_date'])) {
-            $conditions[] = "date <= :end_date";
-            $params['end_date'] = $filters['end_date'];
-        }
-        
-        if (!empty($filters['search'])) {
-            $conditions[] = "(title LIKE :search OR description LIKE :search)";
-            $params['search'] = '%' . $filters['search'] . '%';
-        }
-        
-        return empty($conditions) ? '' : ' AND ' . implode(' AND ', $conditions);
-    }
-
     /**
      * Récupérer les transactions avec filtres et tri avancés
      * 
@@ -293,8 +168,46 @@ class TransactionRepository extends Repository
             $sql = "SELECT * FROM {$this->table} WHERE user_id = :user_id";
             $params = ['user_id' => $userId];
             
-            // Utiliser la méthode privée pour construire les filtres
-            $sql .= $this->buildFilterConditions($filters, $params);
+            // Construire les conditions de filtrage
+            if (!empty($filters['category_id'])) {
+                $sql .= " AND category_id = :category_id";
+                $params['category_id'] = (int) $filters['category_id'];
+            }
+            
+            if (!empty($filters['sub_category_id'])) {
+                $sql .= " AND sub_category_id = :sub_category_id";
+                $params['sub_category_id'] = (int) $filters['sub_category_id'];
+            }
+            
+            if (!empty($filters['account_id'])) {
+                $sql .= " AND account_id = :account_id";
+                $params['account_id'] = (int) $filters['account_id'];
+            }
+            
+            if (isset($filters['min_amount']) && $filters['min_amount'] !== '') {
+                $sql .= " AND amount >= :min_amount";
+                $params['min_amount'] = (float) $filters['min_amount'];
+            }
+            
+            if (isset($filters['max_amount']) && $filters['max_amount'] !== '') {
+                $sql .= " AND amount <= :max_amount";
+                $params['max_amount'] = (float) $filters['max_amount'];
+            }
+            
+            if (!empty($filters['start_date'])) {
+                $sql .= " AND date >= :start_date";
+                $params['start_date'] = $filters['start_date'];
+            }
+            
+            if (!empty($filters['end_date'])) {
+                $sql .= " AND date <= :end_date";
+                $params['end_date'] = $filters['end_date'];
+            }
+            
+            if (!empty($filters['search'])) {
+                $sql .= " AND (title LIKE :search OR description LIKE :search)";
+                $params['search'] = '%' . $filters['search'] . '%';
+            }
             
             // Validation et ajout du tri
             $allowedSortColumns = ['date', 'amount', 'title', 'category_id', 'sub_category_id', 'created_at'];
@@ -324,7 +237,10 @@ class TransactionRepository extends Repository
             }
             
             $stmt->execute();
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Convertir les tableaux en objets Transaction
+            return array_map(fn($data) => Transaction::fromArray($data), $results);
             
         } catch (Exception $e) {
             error_log("Erreur getFilteredAndSorted: " . $e->getMessage());
@@ -345,8 +261,46 @@ class TransactionRepository extends Repository
             $sql = "SELECT COUNT(*) FROM {$this->table} WHERE user_id = :user_id";
             $params = ['user_id' => $userId];
             
-            // Utiliser la même méthode privée pour construire les filtres
-            $sql .= $this->buildFilterConditions($filters, $params);
+            // Construire les mêmes conditions que getFilteredAndSorted
+            if (!empty($filters['category_id'])) {
+                $sql .= " AND category_id = :category_id";
+                $params['category_id'] = (int) $filters['category_id'];
+            }
+            
+            if (!empty($filters['sub_category_id'])) {
+                $sql .= " AND sub_category_id = :sub_category_id";
+                $params['sub_category_id'] = (int) $filters['sub_category_id'];
+            }
+            
+            if (!empty($filters['account_id'])) {
+                $sql .= " AND account_id = :account_id";
+                $params['account_id'] = (int) $filters['account_id'];
+            }
+            
+            if (isset($filters['min_amount']) && $filters['min_amount'] !== '') {
+                $sql .= " AND amount >= :min_amount";
+                $params['min_amount'] = (float) $filters['min_amount'];
+            }
+            
+            if (isset($filters['max_amount']) && $filters['max_amount'] !== '') {
+                $sql .= " AND amount <= :max_amount";
+                $params['max_amount'] = (float) $filters['max_amount'];
+            }
+            
+            if (!empty($filters['start_date'])) {
+                $sql .= " AND date >= :start_date";
+                $params['start_date'] = $filters['start_date'];
+            }
+            
+            if (!empty($filters['end_date'])) {
+                $sql .= " AND date <= :end_date";
+                $params['end_date'] = $filters['end_date'];
+            }
+            
+            if (!empty($filters['search'])) {
+                $sql .= " AND (title LIKE :search OR description LIKE :search)";
+                $params['search'] = '%' . $filters['search'] . '%';
+            }
             
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);

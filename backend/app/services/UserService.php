@@ -3,7 +3,8 @@
 namespace FinanceFlow\Services;
 
 use FinanceFlow\Models\User;
-use FinanceFlow\Services\{AuthService, ValidationService, UserRepository};
+use FinanceFlow\Repositories\UserRepository;
+use FinanceFlow\Services\{AuthService, ValidationService};
 use FinanceFlow\DTOs\User\{CreateUserRequest, UpdateUserRequest, UserResponse};
 
 class UserService

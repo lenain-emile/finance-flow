@@ -52,26 +52,3 @@ $router->delete('/api/transactions/{id}', 'TransactionController@delete');
 $router->get('/api/transactions/recent', 'TransactionController@recent');
 $router->get('/api/transactions/stats', 'TransactionController@stats');
 $router->get('/api/transactions/total', 'TransactionController@total');
-
-// Catégories
-// $router->get('/api/categories', 'CategoryController@index');
-// $router->post('/api/categories', 'CategoryController@store');
-// $router->put('/api/categories/{id}', 'CategoryController@update');
-// $router->delete('/api/categories/{id}', 'CategoryController@destroy');
-
-// Comptes
-// $router->get('/api/accounts', 'AccountController@index');
-// $router->post('/api/accounts', 'AccountController@store');
-// $router->put('/api/accounts/{id}', 'AccountController@update');
-// $router->delete('/api/accounts/{id}', 'AccountController@destroy');
-
-// Budget
-// $router->get('/api/budgets', 'BudgetController@index');
-// $router->post('/api/budgets', 'BudgetController@store');
-// $router->put('/api/budgets/{id}', 'BudgetController@update');
-// $router->delete('/api/budgets/{id}', 'BudgetController@destroy');
-
-// Statistiques et rapports
-// $router->get('/api/stats/overview', 'StatsController@overview');
-// $router->get('/api/stats/balance', 'StatsController@balance');
-// $router->get('/api/stats/charts', 'StatsController@charts');

@@ -3,6 +3,7 @@
 namespace FinanceFlow\Controllers;
 
 use FinanceFlow\Services\TransactionService;
+use FinanceFlow\Models\Transaction;
 use FinanceFlow\Middleware\AuthMiddleware;
 use FinanceFlow\Core\Response;
 use FinanceFlow\DTOs\Transaction\{CreateTransactionRequest, UpdateTransactionRequest, TransactionResponse};
@@ -58,8 +59,8 @@ class TransactionController
             $userId = AuthMiddleware::getCurrentUserId();
             $transaction = $this->transactionService->createTransaction($createRequest, $userId);
             
-            // Convertir la réponse en DTO
-            $transactionResponse = TransactionResponse::fromArray($transaction);
+            // Convertir l'objet Transaction en tableau puis en DTO
+            $transactionResponse = TransactionResponse::fromArray($transaction->toArray());
             Response::success($transactionResponse->toArray(), 'Transaction créée avec succès', 201);
         } catch (\Exception $e) {
             error_log("Erreur création transaction: " . $e->getMessage());
@@ -81,30 +82,79 @@ class TransactionController
         try {
             $userId = AuthMiddleware::getCurrentUserId();
             
-            // Paramètres de pagination optionnels
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : null;
-            $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+            // Récupérer les paramètres de filtrage depuis la query string
+            $filters = [];
             
-            // Paramètres de recherche optionnels
-            if (isset($_GET['search']) && !empty($_GET['search'])) {
-                $transactions = $this->transactionService->searchTransactions($userId, $_GET['search']);
-                $message = 'Résultats de recherche récupérés avec succès';
-            } elseif (isset($_GET['start_date']) && isset($_GET['end_date'])) {
-                $transactions = $this->transactionService->getTransactionsByDateRange(
-                    $userId, 
-                    $_GET['start_date'], 
-                    $_GET['end_date']
-                );
-                $message = 'Transactions par période récupérées avec succès';
-            } else {
-                $transactions = $this->transactionService->getUserTransactions($userId, $limit, $offset);
-                $message = 'Transactions récupérées avec succès';
+            if (isset($_GET['category_id']) && is_numeric($_GET['category_id'])) {
+                $filters['category_id'] = (int)$_GET['category_id'];
             }
-
-            Response::success([
-                'transactions' => $transactions,
-                'total' => count($transactions)
-            ], $message);
+            
+            if (isset($_GET['sub_category_id']) && is_numeric($_GET['sub_category_id'])) {
+                $filters['sub_category_id'] = (int)$_GET['sub_category_id'];
+            }
+            
+            if (isset($_GET['account_id']) && is_numeric($_GET['account_id'])) {
+                $filters['account_id'] = (int)$_GET['account_id'];
+            }
+            
+            if (isset($_GET['min_amount']) && is_numeric($_GET['min_amount'])) {
+                $filters['min_amount'] = (float)$_GET['min_amount'];
+            }
+            
+            if (isset($_GET['max_amount']) && is_numeric($_GET['max_amount'])) {
+                $filters['max_amount'] = (float)$_GET['max_amount'];
+            }
+            
+            if (isset($_GET['start_date']) && !empty($_GET['start_date'])) {
+                $filters['start_date'] = $_GET['start_date'];
+            }
+            
+            if (isset($_GET['end_date']) && !empty($_GET['end_date'])) {
+                $filters['end_date'] = $_GET['end_date'];
+            }
+            
+            if (isset($_GET['search']) && !empty($_GET['search'])) {
+                $filters['search'] = $_GET['search'];
+            }
+            
+            // Paramètres de tri
+            $sortBy = $_GET['sort_by'] ?? 'date';
+            $sortOrder = $_GET['sort_order'] ?? 'DESC';
+            
+            // Paramètres de pagination
+            $limit = isset($_GET['limit']) && is_numeric($_GET['limit']) ? (int)$_GET['limit'] : 50;
+            $offset = isset($_GET['offset']) && is_numeric($_GET['offset']) ? (int)$_GET['offset'] : 0;
+            
+            // Si des filtres ou tri personnalisés sont appliqués, utiliser la nouvelle méthode
+            if (!empty($filters) || $sortBy !== 'date' || $sortOrder !== 'DESC') {
+                $result = $this->transactionService->getFilteredAndSortedTransactions(
+                    $userId,
+                    $filters,
+                    $sortBy,
+                    $sortOrder,
+                    $limit,
+                    $offset
+                );
+                
+                Response::success([
+                    'transactions' => $result['transactions'],
+                    'total' => $result['total'],
+                    'filters' => $result['filters_applied'],
+                    'sort' => $result['sort'],
+                    'pagination' => $result['pagination']
+                ], 'Transactions filtrées récupérées avec succès');
+            } else {
+                // Comportement par défaut sans filtres avancés
+                $transactions = $this->transactionService->getUserTransactions($userId, $limit, $offset);
+                
+                // Convertir les objets Transaction en tableaux
+                $transactionsArray = array_map(fn(Transaction $t) => $t->toArray(), $transactions);
+                
+                Response::success([
+                    'transactions' => $transactionsArray,
+                    'total' => count($transactions)
+                ], 'Transactions récupérées avec succès');
+            }
         } catch (\Exception $e) {
             error_log("Erreur récupération transactions: " . $e->getMessage());
             $statusCode = $e->getCode() ?: 500;
@@ -125,7 +175,7 @@ class TransactionController
         try {
             $userId = AuthMiddleware::getCurrentUserId();
             $transaction = $this->transactionService->getTransaction($id, $userId);
-            Response::success($transaction, 'Transaction récupérée avec succès');
+            Response::success($transaction->toArray(), 'Transaction récupérée avec succès');
         } catch (\Exception $e) {
             error_log("Erreur récupération transaction: " . $e->getMessage());
             $statusCode = $e->getCode() ?: 500;
@@ -170,8 +220,8 @@ class TransactionController
             $userId = AuthMiddleware::getCurrentUserId();
             $transaction = $this->transactionService->updateTransaction($id, $updateRequest, $userId);
             
-            // Convertir la réponse en DTO
-            $transactionResponse = TransactionResponse::fromArray($transaction);
+            // Convertir l'objet Transaction en tableau puis en DTO
+            $transactionResponse = TransactionResponse::fromArray($transaction->toArray());
             Response::success($transactionResponse->toArray(), 'Transaction mise à jour avec succès');
         } catch (\Exception $e) {
             error_log("Erreur mise à jour transaction: " . $e->getMessage());
@@ -221,7 +271,11 @@ class TransactionController
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
             
             $transactions = $this->transactionService->getRecentTransactions($userId, $limit);
-            Response::success($transactions, 'Transactions récentes récupérées avec succès');
+            
+            // Convertir les objets Transaction en tableaux
+            $transactionsArray = array_map(fn(Transaction $t) => $t->toArray(), $transactions);
+            
+            Response::success($transactionsArray, 'Transactions récentes récupérées avec succès');
         } catch (\Exception $e) {
             error_log("Erreur récupération transactions récentes: " . $e->getMessage());
             $statusCode = $e->getCode() ?: 500;
