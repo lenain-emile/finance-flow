@@ -120,7 +120,117 @@ abstract class Repository
         }
     }
     
-
+    /**
+     * Trouver un enregistrement par condition (alias de findBy)
+     */
+    public function findOneBy(array $conditions): ?array
+    {
+        return $this->findBy($conditions);
+    }
+    
+    /**
+     * Trouver tous les enregistrements par condition
+     */
+    public function findAllBy(array $conditions, array $orderBy = []): array
+    {
+        try {
+            $whereClause = [];
+            $params = [];
+            
+            foreach ($conditions as $field => $value) {
+                $whereClause[] = "$field = :$field";
+                $params[$field] = $value;
+            }
+            
+            $sql = "SELECT * FROM {$this->table} WHERE " . implode(' AND ', $whereClause);
+            
+            // Ajouter ORDER BY si spécifié
+            if (!empty($orderBy)) {
+                $orderClauses = [];
+                foreach ($orderBy as $field => $direction) {
+                    $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
+                    $orderClauses[] = "$field $direction";
+                }
+                $sql .= " ORDER BY " . implode(', ', $orderClauses);
+            }
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log("Erreur findAllBy dans {$this->table}: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Créer un nouvel enregistrement
+     */
+    public function create(array $data): ?int
+    {
+        try {
+            $fields = array_keys($data);
+            $placeholders = array_map(fn($field) => ":$field", $fields);
+            
+            $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") 
+                    VALUES (" . implode(', ', $placeholders) . ")";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute($data);
+            
+            return $result ? (int) $this->pdo->lastInsertId() : null;
+            
+        } catch (Exception $e) {
+            error_log("Erreur create dans {$this->table}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Mettre à jour un enregistrement
+     */
+    public function update(int $id, array $data): bool
+    {
+        try {
+            if (empty($data)) {
+                return false;
+            }
+            
+            $fields = [];
+            $params = ['id' => $id];
+            
+            foreach ($data as $field => $value) {
+                $fields[] = "$field = :$field";
+                $params[$field] = $value;
+            }
+            
+            $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE {$this->primaryKey} = :id";
+            
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute($params);
+            
+        } catch (Exception $e) {
+            error_log("Erreur update dans {$this->table}: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Supprimer un enregistrement
+     */
+    public function delete(int $id): bool
+    {
+        try {
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute(['id' => $id]);
+        } catch (Exception $e) {
+            error_log("Erreur delete dans {$this->table}: " . $e->getMessage());
+            return false;
+        }
+    }
     
     /**
      * Vérifier si une colonne existe dans la table

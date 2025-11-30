@@ -52,3 +52,20 @@ $router->delete('/api/transactions/{id}', 'TransactionController@delete');
 $router->get('/api/transactions/recent', 'TransactionController@recent');
 $router->get('/api/transactions/stats', 'TransactionController@stats');
 $router->get('/api/transactions/total', 'TransactionController@total');
+
+// ================================
+// ROUTES BUDGETS
+// ================================
+
+// CRUD Budgets
+$router->post('/api/budgets', 'BudgetController@create');
+$router->get('/api/budgets', 'BudgetController@index');
+$router->get('/api/budgets/{id}', 'BudgetController@show');
+$router->put('/api/budgets/{id}', 'BudgetController@update');
+$router->delete('/api/budgets/{id}', 'BudgetController@delete');
+
+// Routes spécifiques budgets
+$router->get('/api/budgets/alerts', 'BudgetController@alerts');
+$router->get('/api/budgets/exceeded', 'BudgetController@exceeded');
+$router->get('/api/budgets/stats', 'BudgetController@stats');
+$router->post('/api/budgets/check-impact', 'BudgetController@checkImpact');

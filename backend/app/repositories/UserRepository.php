@@ -22,64 +22,53 @@ class UserRepository extends Repository
     
     /**
      * Créer un nouvel utilisateur
+     * Wrapper qui mappe username->name et password_hash->password avant d'appeler parent::create
      */
     public function create(array $data): ?int
     {
         try {
-            $sql = "INSERT INTO {$this->table} (name, email, password) 
-                    VALUES (:name, :email, :password)";
-            
-            $stmt = $this->pdo->prepare($sql);
-            
-            $result = $stmt->execute([
+            // Mapper les noms de champs DTO vers les colonnes DB
+            $dbData = [
                 'name' => $data['username'],
                 'email' => $data['email'],
                 'password' => $data['password_hash']
-            ]);
-
-            return $result ? (int) $this->pdo->lastInsertId() : null;
+            ];
+            
+            return parent::create($dbData);
             
         } catch (Exception $e) {
             error_log("Erreur création utilisateur: " . $e->getMessage());
-            throw $e; // Re-throw pour debugging
+            throw $e;
         }
     }
     
     /**
      * Mettre à jour un utilisateur
+     * Wrapper qui mappe username->name et password_hash->password avant d'appeler parent::update
      */
     public function update(int $id, array $data): bool
     {
         try {
-            $fields = [];
-            $params = ['id' => $id];
+            $dbData = [];
             
-            // Mapper username -> name (colonne DB)
+            // Mapper les noms de champs DTO vers les colonnes DB
             if (array_key_exists('username', $data)) {
-                $fields[] = "name = :name";
-                $params['name'] = $data['username'];
+                $dbData['name'] = $data['username'];
             }
             
-            // Mapper password_hash -> password (colonne DB)
             if (array_key_exists('password_hash', $data)) {
-                $fields[] = "password = :password";
-                $params['password'] = $data['password_hash'];
+                $dbData['password'] = $data['password_hash'];
             }
             
-            // Email reste identique
             if (array_key_exists('email', $data)) {
-                $fields[] = "email = :email";
-                $params['email'] = $data['email'];
+                $dbData['email'] = $data['email'];
             }
             
-            if (empty($fields)) {
+            if (empty($dbData)) {
                 return false;
             }
             
-            $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE {$this->primaryKey} = :id";
-            
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute($params);
+            return parent::update($id, $dbData);
             
         } catch (Exception $e) {
             error_log("Erreur mise à jour utilisateur: " . $e->getMessage());
@@ -92,7 +81,7 @@ class UserRepository extends Repository
      */
     public function findByEmail(string $email): ?array
     {
-        return $this->findBy(['email' => $email]);
+        return $this->findOneBy(['email' => $email]);
     }
     
     /**
@@ -100,7 +89,7 @@ class UserRepository extends Repository
      */
     public function findByUsername(string $username): ?array
     {
-        return $this->findBy(['name' => $username]);
+        return $this->findOneBy(['name' => $username]);
     }
     
     /**
@@ -108,7 +97,7 @@ class UserRepository extends Repository
      */
     public function findActiveById(int $id): ?array
     {
-        return $this->findBy(['id' => $id]);
+        return $this->findOneBy(['id' => $id]);
     }
     
     /**
@@ -128,7 +117,7 @@ class UserRepository extends Repository
             }
         }
         
-        return $this->findBy(['email' => $email]) !== null;
+        return $this->findOneBy(['email' => $email]) !== null;
     }
     
     /**
@@ -151,22 +140,7 @@ class UserRepository extends Repository
             }
         }
         
-        return $this->findBy(['name' => $username]) !== null;
-    }
-    
-    /**
-     * Supprimer un utilisateur
-     */
-    public function delete(int $id): bool
-    {
-        try {
-            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute(['id' => $id]);
-        } catch (Exception $e) {
-            error_log("Erreur suppression utilisateur: " . $e->getMessage());
-            return false;
-        }
+        return $this->findOneBy(['name' => $username]) !== null;
     }
     
     /**

@@ -4,7 +4,7 @@ namespace FinanceFlow\Services;
 
 use FinanceFlow\Repositories\TransactionRepository;
 use FinanceFlow\Models\Transaction;
-use FinanceFlow\Services\ValidationService;
+use FinanceFlow\Services\{ValidationService, BudgetService};
 use FinanceFlow\DTOs\Transaction\{CreateTransactionRequest, UpdateTransactionRequest, TransactionResponse};
 use Exception;
 
@@ -16,11 +16,13 @@ class TransactionService
 {
     private TransactionRepository $transactionRepository;
     private ValidationService $validator;
+    private BudgetService $budgetService;
 
     public function __construct()
     {
         $this->transactionRepository = new TransactionRepository();
         $this->validator = new ValidationService();
+        $this->budgetService = new BudgetService();
     }
 
     /**
@@ -33,6 +35,21 @@ class TransactionService
             $validation = $request->isValid();
             if (!$validation['valid']) {
                 throw new Exception('Données invalides: ' . implode(', ', $validation['errors']), 422);
+            }
+
+            // VÉRIFICATION DU BUDGET AVANT CRÉATION
+            if ($request->category_id !== null) {
+                $budgetImpact = $this->budgetService->checkBudgetImpact(
+                    $userId,
+                    $request->category_id,
+                    $request->amount
+                );
+
+                // Loguer l'information pour le suivi
+                if ($budgetImpact['will_exceed']) {
+                    error_log("ALERTE BUDGET: Utilisateur {$userId} - " . $budgetImpact['message']);
+                    // On pourrait aussi envoyer une notification, email, etc.
+                }
             }
 
             // Préparer les données depuis le DTO
@@ -105,6 +122,31 @@ class TransactionService
             // Vérifier qu'il y a des données à mettre à jour
             if (!$request->hasUpdates()) {
                 throw new Exception('Aucune donnée à mettre à jour', 400);
+            }
+
+            // VÉRIFICATION DU BUDGET si le montant ou la catégorie change
+            $categoryId = $request->category_id ?? $existingTransaction->getCategoryId();
+            $newAmount = $request->amount ?? $existingTransaction->getAmount();
+            $oldAmount = $existingTransaction->getAmount();
+            
+            // Si le montant ou la catégorie change, vérifier l'impact sur le budget
+            if (($request->amount !== null && $request->amount !== $oldAmount) || 
+                ($request->category_id !== null && $request->category_id !== $existingTransaction->getCategoryId())) {
+                
+                // Calculer la différence : si on augmente le montant, vérifier l'impact
+                $amountDifference = $newAmount - $oldAmount;
+                
+                if ($amountDifference > 0 && $categoryId !== null) {
+                    $budgetImpact = $this->budgetService->checkBudgetImpact(
+                        $userId,
+                        $categoryId,
+                        $amountDifference
+                    );
+
+                    if ($budgetImpact['will_exceed']) {
+                        error_log("ALERTE BUDGET: Utilisateur {$userId} - " . $budgetImpact['message']);
+                    }
+                }
             }
 
             // Convertir le DTO en array pour le repository
