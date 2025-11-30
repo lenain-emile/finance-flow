@@ -22,17 +22,12 @@ class TransactionRepository extends Repository
     
     /**
      * Créer une nouvelle transaction
-     * Utilise la méthode générique du Repository parent
+     * Wrapper qui gère les valeurs null et appelle parent::create
      */
     public function create(array $data): ?int
     {
         try {
-            $sql = "INSERT INTO {$this->table} (title, description, amount, date, location, category_id, sub_category_id, user_id, account_id) 
-                    VALUES (:title, :description, :amount, :date, :location, :category_id, :sub_category_id, :user_id, :account_id)";
-            
-            $stmt = $this->pdo->prepare($sql);
-            
-            $result = $stmt->execute([
+            $dbData = [
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'amount' => $data['amount'],
@@ -42,9 +37,9 @@ class TransactionRepository extends Repository
                 'sub_category_id' => $data['sub_category_id'] ?? null,
                 'user_id' => $data['user_id'],
                 'account_id' => $data['account_id'] ?? null
-            ]);
-
-            return $result ? (int) $this->pdo->lastInsertId() : null;
+            ];
+            
+            return parent::create($dbData);
             
         } catch (Exception $e) {
             error_log("Erreur création transaction: " . $e->getMessage());
@@ -54,49 +49,28 @@ class TransactionRepository extends Repository
     
     /**
      * Mettre à jour une transaction
-     * Utilise la méthode générique du Repository parent
+     * Wrapper qui filtre les champs autorisés et appelle parent::update
      */
     public function update(int $id, array $data): bool
     {
         try {
-            $fields = [];
-            $params = ['id' => $id];
-            
             $allowedFields = ['title', 'description', 'amount', 'date', 'location', 'category_id', 'sub_category_id', 'account_id'];
             
+            $dbData = [];
             foreach ($allowedFields as $field) {
                 if (array_key_exists($field, $data)) {
-                    $fields[] = "$field = :$field";
-                    $params[$field] = $data[$field];
+                    $dbData[$field] = $data[$field];
                 }
             }
             
-            if (empty($fields)) {
+            if (empty($dbData)) {
                 return false;
             }
             
-            $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE {$this->primaryKey} = :id";
-            
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute($params);
+            return parent::update($id, $dbData);
             
         } catch (Exception $e) {
             error_log("Erreur mise à jour transaction: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Supprimer une transaction
-     */
-    public function delete(int $id): bool
-    {
-        try {
-            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
-            $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute(['id' => $id]);
-        } catch (Exception $e) {
-            error_log("Erreur suppression transaction: " . $e->getMessage());
             return false;
         }
     }
@@ -106,7 +80,7 @@ class TransactionRepository extends Repository
      */
     public function findByIdAndUserId(int $id, int $userId): ?Transaction
     {
-        $data = $this->findBy(['id' => $id, 'user_id' => $userId]);
+        $data = $this->findOneBy(['id' => $id, 'user_id' => $userId]);
         return $data ? Transaction::fromArray($data) : null;
     }
     
