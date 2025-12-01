@@ -37,6 +37,21 @@ class TransactionService
                 throw new Exception('Données invalides: ' . implode(', ', $validation['errors']), 422);
             }
 
+            // VÉRIFICATION DU SOLDE SI DÉPENSE
+            if ($request->amount < 0 && $request->account_id !== null) {
+                $accountService = new \FinanceFlow\Services\AccountService();
+                $balanceCheck = $accountService->hasSufficientBalance(
+                    $request->account_id,
+                    $userId,
+                    $request->amount
+                );
+
+                if (!$balanceCheck['sufficient']) {
+                    error_log("ALERTE SOLDE: Utilisateur {$userId} - " . $balanceCheck['message']);
+                    throw new Exception($balanceCheck['message'], 422);
+                }
+            }
+
             // VÉRIFICATION DU BUDGET AVANT CRÉATION
             if ($request->category_id !== null) {
                 $budgetImpact = $this->budgetService->checkBudgetImpact(
