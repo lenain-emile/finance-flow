@@ -69,3 +69,17 @@ $router->get('/api/budgets/alerts', 'BudgetController@alerts');
 $router->get('/api/budgets/exceeded', 'BudgetController@exceeded');
 $router->get('/api/budgets/stats', 'BudgetController@stats');
 $router->post('/api/budgets/check-impact', 'BudgetController@checkImpact');
+
+// ================================
+// ROUTES COMPTES
+// ================================
+
+// CRUD Comptes
+$router->post('/api/accounts', 'AccountController@create');
+$router->get('/api/accounts', 'AccountController@index');
+$router->get('/api/accounts/{id}', 'AccountController@show');
+$router->put('/api/accounts/{id}', 'AccountController@update');
+$router->delete('/api/accounts/{id}', 'AccountController@delete');
+
+// Routes spécifiques comptes
+$router->get('/api/accounts/{id}/balance', 'AccountController@balance');
