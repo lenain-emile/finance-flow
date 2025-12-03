@@ -83,3 +83,27 @@ $router->delete('/api/accounts/{id}', 'AccountController@delete');
 
 // Routes spécifiques comptes
 $router->get('/api/accounts/{id}/balance', 'AccountController@balance');
+
+// ================================
+// ROUTES TRANSACTIONS PLANIFIÉES
+// ================================
+
+// Routes spécifiques (AVANT les routes avec {id})
+$router->get('/api/planned-transactions/due', 'PlannedTransactionController@due');
+$router->get('/api/planned-transactions/upcoming', 'PlannedTransactionController@upcoming');
+$router->get('/api/planned-transactions/incomes', 'PlannedTransactionController@incomes');
+$router->get('/api/planned-transactions/expenses', 'PlannedTransactionController@expenses');
+$router->get('/api/planned-transactions/projection', 'PlannedTransactionController@projection');
+$router->get('/api/planned-transactions/stats', 'PlannedTransactionController@stats');
+$router->post('/api/planned-transactions/execute-all', 'PlannedTransactionController@executeAll');
+
+// CRUD Transactions planifiées
+$router->post('/api/planned-transactions', 'PlannedTransactionController@create');
+$router->get('/api/planned-transactions', 'PlannedTransactionController@index');
+$router->get('/api/planned-transactions/{id}', 'PlannedTransactionController@show');
+$router->put('/api/planned-transactions/{id}', 'PlannedTransactionController@update');
+$router->delete('/api/planned-transactions/{id}', 'PlannedTransactionController@delete');
+
+// Actions sur une transaction planifiée
+$router->post('/api/planned-transactions/{id}/toggle', 'PlannedTransactionController@toggle');
+$router->post('/api/planned-transactions/{id}/execute', 'PlannedTransactionController@execute');
