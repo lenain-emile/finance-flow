@@ -65,8 +65,8 @@ class CreateTransactionRequest
             $errors['title'] = 'Le titre ne peut pas dépasser 150 caractères';
         }
 
-        if ($this->amount <= 0) {
-            $errors['amount'] = 'Le montant doit être positif';
+        if ($this->amount == 0) {
+            $errors['amount'] = 'Le montant ne peut pas être zéro';
         }
 
         if (empty($this->date)) {
