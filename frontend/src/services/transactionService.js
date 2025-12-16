@@ -240,13 +240,13 @@ class TransactionService {
       errors.title = 'Le titre ne peut pas dépasser 150 caractères'
     }
 
-    // Validation du montant
-    if (!transactionData.amount) {
+    // Validation du montant (peut être négatif pour les dépenses)
+    if (transactionData.amount === undefined || transactionData.amount === null || transactionData.amount === '') {
       errors.amount = 'Le montant est requis'
     } else if (isNaN(parseFloat(transactionData.amount))) {
       errors.amount = 'Le montant doit être numérique'
-    } else if (parseFloat(transactionData.amount) <= 0) {
-      errors.amount = 'Le montant doit être positif'
+    } else if (parseFloat(transactionData.amount) === 0) {
+      errors.amount = 'Le montant ne peut pas être zéro'
     }
 
     // Validation de la date

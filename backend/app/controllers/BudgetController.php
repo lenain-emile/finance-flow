@@ -106,7 +106,10 @@ class BudgetController
                 );
             }
             
-            Response::success($budgetsResponse, 'Budgets récupérés avec succès');
+            Response::success([
+                'budgets' => $budgetsResponse,
+                'count' => count($budgetsResponse)
+            ], 'Budgets récupérés avec succès');
         } catch (\Exception $e) {
             error_log("Erreur récupération budgets: " . $e->getMessage());
             $statusCode = $e->getCode() ?: 500;

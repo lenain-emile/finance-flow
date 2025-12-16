@@ -41,7 +41,9 @@ class BudgetService
             $budgetData = [
                 'max_amount' => $request->max_amount,
                 'category_id' => $request->category_id,
-                'user_id' => $userId
+                'user_id' => $userId,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date
             ];
 
             $budgetId = $this->budgetRepository->create($budgetData);

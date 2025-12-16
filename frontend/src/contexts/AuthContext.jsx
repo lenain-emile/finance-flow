@@ -1,6 +1,6 @@
 import { createContext, useReducer, useEffect } from 'react'
-import authService from '../services/authService'
-import { AUTH_ACTIONS } from './authConstants'
+import authService from '@/services/authService'
+import { AUTH_ACTIONS } from '@/contexts/authConstants'
 
 // État initial de l'authentification
 const initialState = {
@@ -112,7 +112,8 @@ export function AuthProvider({ children }) {
             }
           })
         } else {
-          // Aucune session valide trouvée
+          // Aucune session valide trouvée, nettoyer
+          authService.clearAuth()
           dispatch({
             type: AUTH_ACTIONS.LOAD_USER,
             payload: {
@@ -122,6 +123,7 @@ export function AuthProvider({ children }) {
               isAuthenticated: false
             }
           })
+          // Note: La redirection est gérée par ProtectedRoute
         }
       } catch (error) {
         console.error('Erreur lors du chargement de la session:', error)
@@ -215,6 +217,10 @@ export function AuthProvider({ children }) {
       console.error('Erreur lors de la déconnexion:', error)
     } finally {
       dispatch({ type: AUTH_ACTIONS.LOGOUT })
+      // Rediriger vers la page de connexion
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
   }
 

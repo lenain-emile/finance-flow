@@ -3,6 +3,13 @@
 
 RewriteEngine On
 
+# IMPORTANT: Passer le header Authorization à PHP (requis pour JWT)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Alternative pour CGI/FastCGI
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
 # Rediriger toutes les requêtes vers index.php (API REST)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

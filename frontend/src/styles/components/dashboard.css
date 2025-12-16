@@ -1,0 +1,290 @@
+/* Dashboard Styles - Finance Flow */
+
+/* Dashboard Layout - Full viewport without scroll */
+.dashboard {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #C38EF0 !important;
+}
+
+.dashboard__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+/* Top Stats Row */
+.dashboard__stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) auto;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* Main Content Grid - 2 rows layout */
+.dashboard__main-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: 1fr auto;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Chart and Transactions wrapper - left column */
+.dashboard__left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Chart takes available space */
+.dashboard__chart {
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+/* Transactions at bottom of left column */
+.dashboard__transactions {
+  flex-shrink: 0;
+  max-height: 180px;
+  overflow: hidden;
+}
+
+/* Bottom section with transactions and planned */
+.dashboard__bottom-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  max-height: 180px;
+}
+
+/* Planned transactions card */
+.dashboard__planned {
+  overflow: hidden;
+}
+
+/* Right column - accounts and budgets */
+.dashboard__right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Accounts card */
+.dashboard__accounts {
+  flex: 1;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+/* Budgets card */
+.dashboard__budgets {
+  flex: 1;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+/* Dashboard Card Styles */
+.dashboard__card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard__card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.dashboard__card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dashboard__card-action {
+  font-size: 0.75rem;
+  color: #C38EF0;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: background-color 0.2s;
+}
+
+.dashboard__card-action:hover {
+  background-color: #C38EF0;
+  color: white;
+}
+
+.dashboard__card-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dashboard__card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashboard__card-content::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.dashboard__card-content::-webkit-scrollbar-thumb {
+  background: #C38EF0;
+  border-radius: 4px;
+}
+
+/* Alert Banner */
+.dashboard__alerts {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Loading State */
+.dashboard__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard__spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid #f3f4f6;
+  border-top-color: #C38EF0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error State */
+.dashboard__error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #6b7280;
+}
+
+.dashboard__error-icon {
+  width: 4rem;
+  height: 4rem;
+  color: #ef4444;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dashboard__main-grid {
+    grid-template-columns: 1fr 240px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboard__stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .dashboard__stats-row > :nth-child(4) {
+    grid-column: span 2;
+    justify-self: center;
+  }
+  
+  .dashboard__main-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .dashboard__right-column {
+    flex-direction: row;
+  }
+  
+  .dashboard__accounts,
+  .dashboard__budgets {
+    flex: 1;
+    min-height: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard__content {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .dashboard__stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .dashboard__stats-row > :nth-child(4) {
+    grid-column: span 2;
+    justify-self: center;
+  }
+  
+  .dashboard__main-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard__right-column {
+    flex-direction: column;
+  }
+  
+  .dashboard__chart {
+    min-height: 180px;
+  }
+  
+  .dashboard__transactions {
+    max-height: 150px;
+  }
+
+  .dashboard__bottom-section {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  .dashboard__planned {
+    max-height: 150px;
+  }
+}
+
+/* Card hover effects */
+.dashboard [class*="card"] {
+  transition: box-shadow 0.2s ease;
+}
+
+.dashboard [class*="card"]:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}

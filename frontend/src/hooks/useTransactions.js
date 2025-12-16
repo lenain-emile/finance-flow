@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import TransactionContext from '../contexts/TransactionContext'
+import TransactionContext from '@/contexts/TransactionContext'
 
 /**
  * Hook pour utiliser le contexte des transactions

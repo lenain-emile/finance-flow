@@ -1,5 +1,5 @@
 import { createContext, useReducer, useCallback } from 'react'
-import transactionService from '../services/transactionService'
+import transactionService from '@/services/transactionService'
 
 // Actions pour le reducer des transactions
 const TRANSACTION_ACTIONS = {

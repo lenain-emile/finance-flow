@@ -50,6 +50,19 @@ class PlannedTransactionService
                 throw new Exception('Transaction planifiée créée mais impossible de la récupérer', 500);
             }
 
+            // Exécuter immédiatement si la date planifiée est aujourd'hui ou avant
+            $nextDate = $plannedTransaction->getNextDate();
+            $today = date('Y-m-d');
+            if ($nextDate && strtotime($nextDate) <= strtotime($today)) {
+                // On exécute la transaction réelle
+                try {
+                    $this->executeTransaction($plannedTransaction->getId(), $userId);
+                } catch (Exception $e) {
+                    error_log("Erreur exécution immédiate planned_transaction: " . $e->getMessage());
+                    // On ne bloque pas la création, mais on log l'erreur
+                }
+            }
+
             return $plannedTransaction;
 
         } catch (Exception $e) {

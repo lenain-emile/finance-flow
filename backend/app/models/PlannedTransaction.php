@@ -317,11 +317,20 @@ class PlannedTransaction
     /**
      * Obtenir le montant signé (négatif pour expense, positif pour income)
      */
+    /**
+     * Retourne le montant signé, en tenant compte du taux d'intérêt si défini
+     */
     public function getSignedAmount(): float
     {
-        if ($this->operationType === 'expense') {
-            return -abs($this->amount ?? 0);
+        $baseAmount = $this->amount ?? 0;
+        $interestRate = $this->interestRate ?? 0;
+        // Appliquer l'intérêt si défini et non nul
+        if ($interestRate > 0) {
+            $baseAmount = $baseAmount * (1 + $interestRate / 100);
         }
-        return abs($this->amount ?? 0);
+        if ($this->operationType === 'expense') {
+            return -abs($baseAmount);
+        }
+        return abs($baseAmount);
     }
 }

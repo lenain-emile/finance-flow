@@ -1,6 +1,5 @@
-import { Input } from "../atoms/input"
-import { Label } from "../atoms/label"
-import { cn } from "../../lib/utils"
+import { Input, Label } from "@/components/atoms"
+import { cn } from "@/lib/utils"
 
 export function InputWithError({
   id,
