@@ -1,11 +1,13 @@
 import { useState } from "react"
-import { Button } from "../atoms/button"
-import { useAuth } from "../../hooks/useAuth"
-import "../../styles/components/navbar.css"
+import { Link, useNavigate } from "react-router-dom"
+import { Button } from "@/components/atoms"
+import { useAuth } from "@/hooks/useAuth"
+import "@/styles/components/navbar.css"
 
 export function Navbar({ currentPage = "home" }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuth()
+  const navigate = useNavigate()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -14,7 +16,7 @@ export function Navbar({ currentPage = "home" }) {
   const handleLogout = async () => {
     try {
       await logout()
-      window.location.href = '/'
+      navigate('/')
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error)
     }
@@ -27,7 +29,7 @@ export function Navbar({ currentPage = "home" }) {
           
           {/* Logo */}
           <div className="navbar__logo-container">
-            <div className="navbar__logo">
+            <Link to="/" className="navbar__logo">
               <div className="navbar__logo-icon">
                 <span className="navbar__logo-text">FF</span>
               </div>
@@ -37,44 +39,40 @@ export function Navbar({ currentPage = "home" }) {
                 </span>
                 <p className="navbar__brand-subtitle">Gérez vos finances</p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Navigation Links - Desktop */}
           <div className="navbar__nav-desktop">
             <div className="navbar__nav-list">
-              <a
-                href="/"
+              <Link
+                to="/"
                 className={currentPage === "home" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
               >
                 Accueil
-              </a>
-              <a
-                href="/dashboard"
+              </Link>
+              <Link
+                to="/dashboard"
                 className={currentPage === "dashboard" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
               >
                 Dashboard
-              </a>
-              <a
-                href="/transactions"
-                className={currentPage === "transactions" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
-              >
-                Transactions
-              </a>
+              </Link>
               {isAuthenticated && (
-                <a
-                  href="/add-transaction"
-                  className={currentPage === "add-transaction" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
-                >
-                  Ajouter Transaction
-                </a>
+                <>
+                  <Link
+                    to="/add-transaction"
+                    className={currentPage === "add-transaction" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
+                  >
+                    Ajouter Transaction
+                  </Link>
+                  <Link
+                    to="/planned-transactions/create"
+                    className={currentPage === "planned-transactions" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
+                  >
+                    Transaction planifiée
+                  </Link>
+                </>
               )}
-              <a
-                href="/analytics"
-                className={currentPage === "analytics" ? "navbar__nav-link navbar__nav-link--active" : "navbar__nav-link"}
-              >
-                Analyses
-              </a>
             </div>
           </div>
 
@@ -102,14 +100,14 @@ export function Navbar({ currentPage = "home" }) {
                   variant="outline" 
                   size="sm"
                   className="navbar__btn-login"
-                  onClick={() => window.location.href = '/login'}
+                  onClick={() => navigate('/login')}
                 >
                   Connexion
                 </Button>
                 <Button 
                   size="sm"
                   className="navbar__btn-register"
-                  onClick={() => window.location.href = '/register'}
+                  onClick={() => navigate('/register')}
                 >
                   Inscription
                 </Button>
@@ -146,38 +144,46 @@ export function Navbar({ currentPage = "home" }) {
           <div className="navbar__mobile-menu">
             <div className="navbar__mobile-container">
               {/* Mobile Navigation Links */}
-              <a
-                href="/"
+              <Link
+                to="/"
                 className={currentPage === "home" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
               >
                 🏠 Accueil
-              </a>
-              <a
-                href="/dashboard"
+              </Link>
+              <Link
+                to="/dashboard"
                 className={currentPage === "dashboard" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
               >
                 📊 Dashboard
-              </a>
-              <a
-                href="/transactions"
+              </Link>
+              <Link
+                to="/transactions"
                 className={currentPage === "transactions" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
               >
                 💳 Transactions
-              </a>
+              </Link>
               {isAuthenticated && (
-                <a
-                  href="/add-transaction"
-                  className={currentPage === "add-transaction" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
-                >
-                  ➕ Ajouter Transaction
-                </a>
+                <>
+                  <Link
+                    to="/add-transaction"
+                    className={currentPage === "add-transaction" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
+                  >
+                    ➕ Ajouter Transaction
+                  </Link>
+                  <Link
+                    to="/planned-transactions/create"
+                    className={currentPage === "planned-transactions" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
+                  >
+                    🗓️ Transaction planifiée
+                  </Link>
+                </>
               )}
-              <a
-                href="/analytics"
+              <Link
+                to="/analytics"
                 className={currentPage === "analytics" ? "navbar__mobile-link navbar__mobile-link--active" : "navbar__mobile-link"}
               >
                 📈 Analyses
-              </a>
+              </Link>
               
               {/* Mobile Actions */}
               <div className="navbar__mobile-actions">
@@ -202,13 +208,13 @@ export function Navbar({ currentPage = "home" }) {
                       <Button 
                         variant="outline" 
                         className="navbar__mobile-btn-login"
-                        onClick={() => window.location.href = '/login'}
+                        onClick={() => navigate('/login')}
                       >
                         Connexion
                       </Button>
                       <Button 
                         className="navbar__mobile-btn-register"
-                        onClick={() => window.location.href = '/register'}
+                        onClick={() => navigate('/register')}
                       >
                         Inscription
                       </Button>

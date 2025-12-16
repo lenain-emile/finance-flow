@@ -189,7 +189,14 @@ class Router {
                 if (class_exists($controllerClass)) {
                     $controller = new $controllerClass();
                     if (method_exists($controller, $methodName)) {
-                        $controller->$methodName($params);
+                        // Passer les paramètres comme arguments séparés au lieu d'un tableau
+                        // Convertir les valeurs numériques en entiers si possible
+                        $args = array_map(function($value) {
+                            return is_numeric($value) ? (int)$value : $value;
+                        }, array_values($params));
+                        
+                        // Appeler avec les arguments déballés
+                        $controller->$methodName(...$args);
                     } else {
                         Response::json(['error' => 'Méthode non trouvée'], 500);
                     }

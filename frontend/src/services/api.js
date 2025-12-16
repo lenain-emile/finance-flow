@@ -23,6 +23,9 @@ api.interceptors.request.use(
   }
 )
 
+// Variable pour éviter les redirections multiples
+let isRedirecting = false
+
 // Intercepteur pour gérer les réponses et les erreurs
 api.interceptors.response.use(
   (response) => {
@@ -42,20 +45,28 @@ api.interceptors.response.use(
             refresh_token: refreshToken
           })
 
-          const { access_token } = response.data.data
-          localStorage.setItem('auth_token', access_token)
+          if (response.data?.data?.access_token) {
+            const { access_token } = response.data.data
+            localStorage.setItem('auth_token', access_token)
 
-          // Réessayer la requête originale avec le nouveau token
-          originalRequest.headers.Authorization = `Bearer ${access_token}`
-          return api(originalRequest)
+            // Réessayer la requête originale avec le nouveau token
+            originalRequest.headers.Authorization = `Bearer ${access_token}`
+            return api(originalRequest)
+          }
         }
       } catch (refreshError) {
-        // Échec du rafraîchissement, rediriger vers la connexion
+        // Échec du rafraîchissement
+      }
+      
+      // Pas de refresh token ou échec, rediriger vers login
+      if (!isRedirecting) {
+        isRedirecting = true
         localStorage.removeItem('auth_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user_data')
-        window.location.href = '/login'
-        return Promise.reject(refreshError)
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
     }
 

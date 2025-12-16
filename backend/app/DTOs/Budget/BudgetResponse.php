@@ -16,7 +16,10 @@ class BudgetResponse
         public readonly ?float $spent_amount = null,
         public readonly ?float $remaining_amount = null,
         public readonly ?float $usage_percentage = null,
-        public readonly ?string $status = null
+        public readonly ?string $status = null,
+        public readonly ?string $start_date = null,
+        public readonly ?string $end_date = null,
+        public readonly ?string $created_at = null
     ) {}
 
     /**
@@ -33,7 +36,10 @@ class BudgetResponse
             spent_amount: isset($data['spent_amount']) ? (float) $data['spent_amount'] : null,
             remaining_amount: isset($data['remaining_amount']) ? (float) $data['remaining_amount'] : null,
             usage_percentage: isset($data['usage_percentage']) ? (float) $data['usage_percentage'] : null,
-            status: $data['status'] ?? null
+            status: $data['status'] ?? null,
+            start_date: $data['start_date'] ?? null,
+            end_date: $data['end_date'] ?? null,
+            created_at: $data['created_at'] ?? null
         );
     }
 
@@ -50,7 +56,10 @@ class BudgetResponse
                 'id' => $this->category_id,
                 'name' => $this->category_name
             ],
-            'user_id' => $this->user_id
+            'user_id' => $this->user_id,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
+            'created_at' => $this->created_at
         ];
 
         // Ajouter les informations d'utilisation si disponibles

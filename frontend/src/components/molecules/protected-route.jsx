@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth'
-import { LoginPage } from '../pages/login-page'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 
 /**
  * Composant de protection des routes
  * Redirige vers la page de connexion si l'utilisateur n'est pas authentifié
  */
-export function ProtectedRoute({ children, showLoginPage = true, redirectTo = '/login' }) {
+export function ProtectedRoute({ children, redirectTo = '/login' }) {
   const { isAuthenticated, isLoading, getCurrentUser } = useAuth()
 
   useEffect(() => {
@@ -37,15 +37,9 @@ export function ProtectedRoute({ children, showLoginPage = true, redirectTo = '/
     )
   }
 
-  // Si pas authentifié, afficher la page de connexion ou rediriger
+  // Si pas authentifié, rediriger vers la page de connexion
   if (!isAuthenticated) {
-    if (showLoginPage) {
-      return <LoginPage />
-    } else {
-      // Redirection JavaScript simple (dans une vraie app, utiliser React Router)
-      window.location.href = redirectTo
-      return null
-    }
+    return <Navigate to={redirectTo} replace />
   }
 
   // Utilisateur authentifié, afficher le contenu protégé

@@ -24,10 +24,6 @@ export const validationRules = {
   },
   amount: {
     required: "Le montant est requis",
-    pattern: { 
-      value: /^\d+(\.\d{1,2})?$/, 
-      message: "Le montant doit être un nombre positif (ex: 10.50)" 
-    },
     min: { value: 0.01, message: "Le montant doit être supérieur à 0" }
   },
   date: {

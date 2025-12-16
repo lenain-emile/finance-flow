@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Navbar } from "../molecules/navbar"
-import { LoginForm } from "../molecules/login-form"
-import { useAuth } from "../../hooks/useAuth"
-import "../../styles/components/pages.css"
+import { useNavigate, Link } from 'react-router-dom'
+import { Navbar, LoginForm } from "@/components/molecules"
+import { useAuth } from "@/hooks/useAuth"
+import "@/styles/components/pages.css"
 
 export function LoginPage() {
   const { login, isLoading, error, clearError } = useAuth()
   const [successMessage, setSuccessMessage] = useState('')
+  const navigate = useNavigate()
   
   const handleLogin = async (formData) => {
     try {
@@ -19,7 +20,7 @@ export function LoginPage() {
         setSuccessMessage('Connexion réussie ! Redirection en cours...')
         // Rediriger vers le tableau de bord après connexion réussie
         setTimeout(() => {
-          window.location.href = '/dashboard' // ou '/' selon votre routage
+          navigate('/dashboard')
         }, 1500)
       }
     } catch (err) {
@@ -86,9 +87,9 @@ export function LoginPage() {
           <div className="login-page__help">
             <p className="login-page__help-text">
               Besoin d'aide ?{" "}
-              <a href="/support" className="login-page__help-link">
+              <Link to="/support" className="login-page__help-link">
                 Contactez le support
-              </a>
+              </Link>
             </p>
           </div>
         </div>

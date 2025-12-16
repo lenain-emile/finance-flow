@@ -1,8 +1,29 @@
-import { Button } from "../atoms/button"
-import { InputWithError } from "./input-with-error"
-import { useFormValidation } from "../../utils/form-validation"
+import { useState, useEffect } from "react"
+import { Button } from "@/components/atoms"
+import { InputWithError } from "@/components/molecules"
+import { useFormValidation } from "@/utils/form-validation"
+import { TrendingDown, TrendingUp } from "lucide-react"
+import accountService from "@/services/accountService"
 
 export function TransactionForm({ onSubmit, isLoading = false, className = "" }) {
+  const [accounts, setAccounts] = useState([])
+  const [accountsLoading, setAccountsLoading] = useState(true)
+
+  // Charger les comptes de l'utilisateur au montage
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const response = await accountService.getAll()
+        setAccounts(response.data?.accounts || response.accounts || [])
+      } catch (error) {
+        console.error('Erreur chargement comptes:', error)
+      } finally {
+        setAccountsLoading(false)
+      }
+    }
+    loadAccounts()
+  }, [])
+
   const {
     formData,
     errors,
@@ -10,11 +31,13 @@ export function TransactionForm({ onSubmit, isLoading = false, className = "" })
     handleChange,
     handleBlur,
     validateForm,
-    isFormValid
+    isFormValid,
+    setFormData
   } = useFormValidation({
     title: "",
     description: "",
     amount: "",
+    transactionType: "expense", // "expense" (dépense) ou "income" (revenu)
     date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
     location: "",
     category_id: "",
@@ -22,25 +45,69 @@ export function TransactionForm({ onSubmit, isLoading = false, className = "" })
     account_id: ""
   })
 
+  // Gestion du changement de type de transaction
+  const handleTypeChange = (type) => {
+    setFormData(prev => ({ ...prev, transactionType: type }))
+  }
+
   // Soumission du formulaire
   const handleSubmit = (e) => {
     e.preventDefault()
     
     if (validateForm()) {
-      onSubmit?.(formData)
+      // Convertir le montant en négatif si c'est une dépense
+      const finalAmount = formData.transactionType === 'expense' 
+        ? -Math.abs(parseFloat(formData.amount))
+        : Math.abs(parseFloat(formData.amount))
+      
+      onSubmit?.({
+        ...formData,
+        amount: finalAmount
+      })
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
       
+      {/* Sélecteur Type de transaction (Dépense / Revenu) */}
+      <div className="form-field">
+        <label className="form-label mb-3">Type de transaction</label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleTypeChange('expense')}
+            className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+              formData.transactionType === 'expense'
+                ? 'border-red-500 bg-red-50 text-red-700 shadow-md'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-red-300 hover:bg-red-50/50'
+            }`}
+          >
+            <TrendingDown className={`h-5 w-5 ${formData.transactionType === 'expense' ? 'text-red-500' : 'text-gray-400'}`} />
+            <span className="font-medium">Dépense</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTypeChange('income')}
+            className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+              formData.transactionType === 'income'
+                ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-green-300 hover:bg-green-50/50'
+            }`}
+          >
+            <TrendingUp className={`h-5 w-5 ${formData.transactionType === 'income' ? 'text-green-500' : 'text-gray-400'}`} />
+            <span className="font-medium">Revenu</span>
+          </button>
+        </div>
+      </div>
+
       {/* Champ Titre */}
       <InputWithError
         id="title"
         name="title"
         type="text"
         label="Titre de la transaction"
-        placeholder="Ex: Courses alimentaires"
+        placeholder={formData.transactionType === 'expense' ? "Ex: Courses alimentaires" : "Ex: Salaire mensuel"}
         value={formData.title}
         onChange={handleChange}
         onBlur={handleBlur}
@@ -51,21 +118,42 @@ export function TransactionForm({ onSubmit, isLoading = false, className = "" })
       />
 
       {/* Champ Montant */}
-      <InputWithError
-        id="amount"
-        name="amount"
-        type="number"
-        step="0.01"
-        label="Montant (€)"
-        placeholder="Ex: 25.50"
-        value={formData.amount}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        error={errors.amount}
-        touched={touched.amount}
-        disabled={isLoading}
-        required
-      />
+      <div className="form-field">
+        <label htmlFor="amount" className="form-label">
+          Montant (€)
+        </label>
+        <div className="relative">
+          <div className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-lg ${
+            formData.transactionType === 'expense' ? 'text-red-500' : 'text-green-500'
+          }`}>
+            {formData.transactionType === 'expense' ? '-' : '+'}
+          </div>
+          <input
+            id="amount"
+            name="amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={formData.amount}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            disabled={isLoading}
+            required
+            className={`form-input pl-8 text-lg font-semibold ${
+              formData.transactionType === 'expense' 
+                ? 'focus:border-red-500 focus:ring-red-500/20' 
+                : 'focus:border-green-500 focus:ring-green-500/20'
+            }`}
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            €
+          </div>
+        </div>
+        {errors.amount && touched.amount && (
+          <p className="form-error">{errors.amount}</p>
+        )}
+      </div>
 
       {/* Champ Date */}
       <InputWithError
@@ -174,7 +262,7 @@ export function TransactionForm({ onSubmit, isLoading = false, className = "" })
           </div>
         </div>
 
-        {/* Compte (optionnel) */}
+        {/* Compte */}
         <div className="form-field mt-4">
           <label htmlFor="account_id" className="form-label">
             Compte
@@ -185,14 +273,23 @@ export function TransactionForm({ onSubmit, isLoading = false, className = "" })
             className="form-input"
             value={formData.account_id}
             onChange={handleChange}
-            disabled={isLoading}
+            disabled={isLoading || accountsLoading}
+            required
           >
-            <option value="">Sélectionner un compte</option>
-            <option value="1">Compte courant</option>
-            <option value="2">Compte épargne</option>
-            <option value="3">Carte de crédit</option>
-            <option value="4">Espèces</option>
+            <option value="">
+              {accountsLoading ? 'Chargement...' : 'Sélectionner un compte'}
+            </option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(account.current_balance || account.initial_balance || 0)})
+              </option>
+            ))}
           </select>
+          {accounts.length === 0 && !accountsLoading && (
+            <p className="text-sm text-amber-600 mt-1">
+              Aucun compte trouvé. Créez d'abord un compte.
+            </p>
+          )}
         </div>
       </div>
 

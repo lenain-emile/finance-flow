@@ -20,7 +20,37 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Séparer les librairies React
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react'
+          }
+          // Séparer React Router
+          if (id.includes('node_modules/react-router')) {
+            return 'vendor-router'
+          }
+          // Séparer Recharts (librairie de graphiques)
+          if (id.includes('node_modules/recharts')) {
+            return 'vendor-charts'
+          }
+          // Séparer Axios
+          if (id.includes('node_modules/axios')) {
+            return 'vendor-axios'
+          }
+          // Séparer les icônes Lucide
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+        }
+      }
+    },
+    // Augmenter légèrement la limite pour éviter les warnings inutiles
+    chunkSizeWarningLimit: 600
+  },
   define: {
-    'process.env': process.env
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   }
 })

@@ -1,6 +1,7 @@
-import { Button } from "../atoms/button"
-import { InputWithError } from "./input-with-error"
-import { useFormValidation } from "../../utils/form-validation"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/atoms"
+import { InputWithError } from "@/components/molecules"
+import { useFormValidation } from "@/utils/form-validation"
 
 export function LoginForm({ onSubmit, isLoading = false, className = "" }) {
   const {
@@ -63,9 +64,9 @@ export function LoginForm({ onSubmit, isLoading = false, className = "" }) {
       {/* Lien mot de passe oublié */}
       <div className="flex items-center justify-between">
         <div className="text-sm">
-          <a href="/forgot-password" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
+          <Link to="/forgot-password" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
             Mot de passe oublié ?
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -82,9 +83,9 @@ export function LoginForm({ onSubmit, isLoading = false, className = "" }) {
       <div className="text-center">
         <p className="text-sm text-gray-600">
           Pas encore de compte ? {" "}
-          <a href="/register" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
+          <Link to="/register" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
             Créer un compte
-          </a>
+          </Link>
         </p>
       </div>
 

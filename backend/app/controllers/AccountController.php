@@ -4,6 +4,7 @@ namespace FinanceFlow\Controllers;
 
 use FinanceFlow\Core\Response;
 use FinanceFlow\Services\AccountService;
+use FinanceFlow\Middleware\AuthMiddleware;
 use FinanceFlow\DTOs\Account\CreateAccountRequest;
 use FinanceFlow\DTOs\Account\UpdateAccountRequest;
 use Exception;
@@ -14,10 +15,12 @@ use Exception;
 class AccountController
 {
     private AccountService $accountService;
+    private AuthMiddleware $authMiddleware;
 
     public function __construct()
     {
         $this->accountService = new AccountService();
+        $this->authMiddleware = new AuthMiddleware();
     }
 
     /**
@@ -26,16 +29,22 @@ class AccountController
      */
     public function create(): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Récupérer et valider les données
             $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                Response::error('Données JSON invalides', 400);
+                return;
+            }
+
             $request = new CreateAccountRequest($data);
 
             // Créer le compte
@@ -59,13 +68,13 @@ class AccountController
      */
     public function index(): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Récupérer les comptes avec leurs soldes
             $accounts = $this->accountService->getAllAccounts($userId);
@@ -86,13 +95,13 @@ class AccountController
      */
     public function show(int $id): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Récupérer le compte avec son solde
             $account = $this->accountService->getAccount($id, $userId);
@@ -113,16 +122,22 @@ class AccountController
      */
     public function update(int $id): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Récupérer et valider les données
             $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                Response::error('Données JSON invalides', 400);
+                return;
+            }
+
             $request = new UpdateAccountRequest($data);
 
             // Mettre à jour le compte
@@ -145,13 +160,13 @@ class AccountController
      */
     public function delete(int $id): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Supprimer le compte
             $this->accountService->deleteAccount($id, $userId);
@@ -172,13 +187,13 @@ class AccountController
      */
     public function balance(int $id): void
     {
+        // Vérifier l'authentification via JWT
+        if (!$this->authMiddleware->authenticate()) {
+            return;
+        }
+
         try {
-            // Récupérer l'utilisateur authentifié
-            $userId = $_SESSION['user_id'] ?? null;
-            if (!$userId) {
-                Response::unauthorized('Non authentifié');
-                return;
-            }
+            $userId = AuthMiddleware::getCurrentUserId();
 
             // Récupérer le solde
             $balance = $this->accountService->getAccountBalance($id, $userId);

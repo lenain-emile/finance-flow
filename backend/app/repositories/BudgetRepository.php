@@ -108,7 +108,7 @@ class BudgetRepository extends Repository
      * 
      * @param int $budgetId ID du budget
      * @param int $userId ID de l'utilisateur (sécurité)
-     * @param string|null $startDate Date de début (pour filtrer les transactions)
+     * @param string|null $startDate Date de début (pour filtrer les transactions) - si null, utilise created_at du budget
      * @param string|null $endDate Date de fin (pour filtrer les transactions)
      * @return array|null
      */
@@ -137,12 +137,19 @@ class BudgetRepository extends Repository
                 return null;
             }
             
-            // Calculer les dépenses pour cette catégorie
+            // TOUJOURS utiliser start_date du budget si défini, sinon created_at
+            // C'est la règle métier : seules les transactions APRÈS la création du budget comptent
+            $budgetStartDate = $budgetData['start_date'] ?? date('Y-m-d', strtotime($budgetData['created_at']));
+            // Utiliser end_date du budget si défini, sinon la date fournie ou null
+            $budgetEndDate = $budgetData['end_date'] ?? $endDate;
+            
+            // Calculer les dépenses pour cette catégorie (depuis la création du budget)
+            // On utilise TOUJOURS $budgetStartDate, jamais $startDate externe
             $spentAmount = $this->calculateSpentAmount(
                 $userId,
                 $budgetData['category_id'],
-                $startDate,
-                $endDate
+                $budgetStartDate,  // Toujours la date de création/début du budget
+                $budgetEndDate
             );
             
             // Ajouter les informations d'utilisation
@@ -178,16 +185,31 @@ class BudgetRepository extends Repository
         ?string $endDate = null
     ): array {
         try {
-            // Utilise findByUserIdWithCategoryNames pour récupérer les budgets avec JOIN
-            $budgets = $this->findByUserIdWithCategoryNames($userId);
+            // Récupérer les budgets avec les colonnes start_date et end_date
+            $sql = "SELECT b.*, c.name as category_name 
+                    FROM {$this->table} b
+                    LEFT JOIN category c ON b.category_id = c.id
+                    WHERE b.user_id = :user_id
+                    ORDER BY b.id DESC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+            $budgets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Ajouter les informations d'utilisation pour chaque budget
             foreach ($budgets as &$budget) {
+                // TOUJOURS utiliser start_date du budget si défini, sinon created_at
+                // C'est la règle métier : seules les transactions APRÈS la création du budget comptent
+                $budgetStartDate = $budget['start_date'] ?? date('Y-m-d', strtotime($budget['created_at']));
+                // Utiliser end_date du budget si défini
+                $budgetEndDate = $budget['end_date'] ?? $endDate;
+                
+                // On utilise TOUJOURS $budgetStartDate, jamais $startDate externe
                 $spentAmount = $this->calculateSpentAmount(
                     $userId,
                     $budget['category_id'],
-                    $startDate,
-                    $endDate
+                    $budgetStartDate,  // Toujours la date de création/début du budget
+                    $budgetEndDate
                 );
                 
                 $budget['spent_amount'] = $spentAmount;
@@ -232,12 +254,13 @@ class BudgetRepository extends Repository
     
     /**
      * Calculer le montant dépensé pour une catégorie
+     * Ne prend en compte que les DÉPENSES (amount < 0) créées APRÈS la date de début du budget
      * 
      * @param int $userId ID de l'utilisateur
      * @param int|null $categoryId ID de la catégorie (null = toutes catégories)
-     * @param string|null $startDate Date de début
+     * @param string|null $startDate Date de début (date de création du budget)
      * @param string|null $endDate Date de fin
-     * @return float
+     * @return float Montant absolu des dépenses (valeur positive)
      */
     private function calculateSpentAmount(
         int $userId,
@@ -246,9 +269,10 @@ class BudgetRepository extends Repository
         ?string $endDate = null
     ): float {
         try {
-            $sql = "SELECT COALESCE(SUM(amount), 0) as total 
+            // On ne prend que les dépenses (amount < 0)
+            $sql = "SELECT COALESCE(SUM(ABS(amount)), 0) as total 
                     FROM transaction 
-                    WHERE user_id = :user_id";
+                    WHERE user_id = :user_id AND amount < 0";
             
             $params = ['user_id' => $userId];
             
@@ -257,6 +281,7 @@ class BudgetRepository extends Repository
                 $params['category_id'] = $categoryId;
             }
             
+            // Seules les transactions APRÈS la date de création du budget comptent
             if ($startDate) {
                 $sql .= " AND date >= :start_date";
                 $params['start_date'] = $startDate;

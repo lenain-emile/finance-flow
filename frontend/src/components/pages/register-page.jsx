@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Navbar } from "@/components/molecules/navbar"
-import { RegisterForm } from "@/components/molecules/register-form"
+import { useNavigate, Link } from 'react-router-dom'
+import { Navbar, RegisterForm } from "@/components/molecules"
 import { useAuth } from "@/hooks/useAuth"
 import "@/styles/components/pages.css"
 
 export function RegisterPage() {
   const { register, isLoading, error, clearError } = useAuth()
   const [successMessage, setSuccessMessage] = useState('')
+  const navigate = useNavigate()
   
   const handleRegister = async (formData) => {
     try {
@@ -21,7 +22,7 @@ export function RegisterPage() {
         )
         // Optionnel : rediriger vers la page de connexion après quelques secondes
         setTimeout(() => {
-          window.location.href = '/login'
+          navigate('/login')
         }, 3000)
       }
     } catch (err) {
@@ -88,13 +89,13 @@ export function RegisterPage() {
           <div className="page__footer">
             <p className="page__footer-text">
               En créant un compte, vous acceptez nos{" "}
-              <a href="/terms" className="page__footer-link">
+              <Link to="/terms" className="page__footer-link">
                 conditions d'utilisation
-              </a>{" "}
+              </Link>{" "}
               et notre{" "}
-              <a href="/privacy" className="page__footer-link">
+              <Link to="/privacy" className="page__footer-link">
                 politique de confidentialité
-              </a>
+              </Link>
             </p>
           </div>
         </div>

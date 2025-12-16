@@ -2,6 +2,7 @@
 @import './components/navbar.css';
 @import './components/forms.css';
 @import './components/pages.css';
+@import './components/dashboard.css';
 
 /* Custom Color Variables */
 :root {

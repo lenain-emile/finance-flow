@@ -1,5 +1,6 @@
-import { Button } from "@/components/atoms/button"
-import { InputWithError } from "@/components/molecules/input-with-error"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/atoms"
+import { InputWithError } from "@/components/molecules"
 import { useFormValidation } from "@/utils/form-validation"
 
 export function RegisterForm({ onSubmit, isLoading = false, className = "" }) {
@@ -89,9 +90,9 @@ export function RegisterForm({ onSubmit, isLoading = false, className = "" }) {
       <div className="text-center">
         <p className="text-sm text-gray-600">
           Déjà un compte ? {" "}
-          <a href="/login" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
+          <Link to="/login" className="text-[#C38EF0] hover:text-[#B570E8] font-medium hover:underline transition-colors duration-200">
             Se connecter
-          </a>
+          </Link>
         </p>
       </div>
 

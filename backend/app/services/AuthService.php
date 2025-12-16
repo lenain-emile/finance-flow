@@ -110,13 +110,34 @@ class AuthService
     {
         $headers = getallheaders();
         
+        // Debug: log tous les headers reçus
+        error_log("=== DEBUG AUTH ===");
+        error_log("Tous les headers: " . print_r($headers, true));
+        error_log("SERVER Authorization: " . ($_SERVER['HTTP_AUTHORIZATION'] ?? 'non défini'));
+        
+        // Essayer plusieurs méthodes pour obtenir le header Authorization
+        $authHeader = null;
+        
         if (isset($headers['Authorization'])) {
             $authHeader = $headers['Authorization'];
+            error_log("Header trouvé via getallheaders['Authorization']");
         } elseif (isset($headers['authorization'])) {
             $authHeader = $headers['authorization'];
-        } else {
+            error_log("Header trouvé via getallheaders['authorization']");
+        } elseif (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+            error_log("Header trouvé via _SERVER['HTTP_AUTHORIZATION']");
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+            error_log("Header trouvé via _SERVER['REDIRECT_HTTP_AUTHORIZATION']");
+        }
+        
+        if (!$authHeader) {
+            error_log("Aucun header Authorization trouvé!");
             return null;
         }
+        
+        error_log("Auth header value: " . $authHeader);
 
         if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
             return $matches[1];

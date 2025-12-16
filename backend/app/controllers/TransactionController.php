@@ -145,13 +145,11 @@ class TransactionController
                 ], 'Transactions filtrées récupérées avec succès');
             } else {
                 // Comportement par défaut sans filtres avancés
+                // getUserTransactions retourne déjà des tableaux (pas des objets Transaction)
                 $transactions = $this->transactionService->getUserTransactions($userId, $limit, $offset);
                 
-                // Convertir les objets Transaction en tableaux
-                $transactionsArray = array_map(fn(Transaction $t) => $t->toArray(), $transactions);
-                
                 Response::success([
-                    'transactions' => $transactionsArray,
+                    'transactions' => $transactions,
                     'total' => count($transactions)
                 ], 'Transactions récupérées avec succès');
             }

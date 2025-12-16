@@ -41,6 +41,11 @@ $router->get('/api/users/check-email/{email}', 'UserController@checkEmailAvailab
 // ROUTES TRANSACTIONS
 // ================================
 
+// Routes spécifiques transactions (AVANT les routes avec {id})
+$router->get('/api/transactions/recent', 'TransactionController@recent');
+$router->get('/api/transactions/stats', 'TransactionController@stats');
+$router->get('/api/transactions/total', 'TransactionController@total');
+
 // CRUD Transactions
 $router->post('/api/transactions', 'TransactionController@create');
 $router->get('/api/transactions', 'TransactionController@index');
@@ -48,14 +53,15 @@ $router->get('/api/transactions/{id}', 'TransactionController@show');
 $router->put('/api/transactions/{id}', 'TransactionController@update');
 $router->delete('/api/transactions/{id}', 'TransactionController@delete');
 
-// Routes spécifiques transactions
-$router->get('/api/transactions/recent', 'TransactionController@recent');
-$router->get('/api/transactions/stats', 'TransactionController@stats');
-$router->get('/api/transactions/total', 'TransactionController@total');
-
 // ================================
 // ROUTES BUDGETS
 // ================================
+
+// Routes spécifiques budgets (AVANT les routes avec {id})
+$router->get('/api/budgets/alerts', 'BudgetController@alerts');
+$router->get('/api/budgets/exceeded', 'BudgetController@exceeded');
+$router->get('/api/budgets/stats', 'BudgetController@stats');
+$router->post('/api/budgets/check-impact', 'BudgetController@checkImpact');
 
 // CRUD Budgets
 $router->post('/api/budgets', 'BudgetController@create');
@@ -64,25 +70,20 @@ $router->get('/api/budgets/{id}', 'BudgetController@show');
 $router->put('/api/budgets/{id}', 'BudgetController@update');
 $router->delete('/api/budgets/{id}', 'BudgetController@delete');
 
-// Routes spécifiques budgets
-$router->get('/api/budgets/alerts', 'BudgetController@alerts');
-$router->get('/api/budgets/exceeded', 'BudgetController@exceeded');
-$router->get('/api/budgets/stats', 'BudgetController@stats');
-$router->post('/api/budgets/check-impact', 'BudgetController@checkImpact');
-
 // ================================
 // ROUTES COMPTES
 // ================================
+
+// Routes spécifiques comptes (AVANT les routes avec {id})
+// Note: /api/accounts/{id}/balance contient {id} donc doit rester après les routes sans paramètre
 
 // CRUD Comptes
 $router->post('/api/accounts', 'AccountController@create');
 $router->get('/api/accounts', 'AccountController@index');
 $router->get('/api/accounts/{id}', 'AccountController@show');
+$router->get('/api/accounts/{id}/balance', 'AccountController@balance');
 $router->put('/api/accounts/{id}', 'AccountController@update');
 $router->delete('/api/accounts/{id}', 'AccountController@delete');
-
-// Routes spécifiques comptes
-$router->get('/api/accounts/{id}/balance', 'AccountController@balance');
 
 // ================================
 // ROUTES TRANSACTIONS PLANIFIÉES
@@ -107,3 +108,10 @@ $router->delete('/api/planned-transactions/{id}', 'PlannedTransactionController@
 // Actions sur une transaction planifiée
 $router->post('/api/planned-transactions/{id}/toggle', 'PlannedTransactionController@toggle');
 $router->post('/api/planned-transactions/{id}/execute', 'PlannedTransactionController@execute');
+
+// ================================
+// ROUTES CATÉGORIES
+// ================================
+
+$router->get('/api/categories/expenses', 'CategoryController@expenses');
+$router->get('/api/categories/incomes', 'CategoryController@incomes');
